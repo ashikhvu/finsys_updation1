@@ -1921,7 +1921,12 @@ def Fin_createNewItem(request):
             name = request.POST['name']
             type = request.POST['type']
             unit = request.POST.get('unit')
-            hsn = request.POST['hsn']
+            if request.POST['hsn']:
+                hsn = request.POST['hsn']
+                sac = None
+            elif request.POST['sac']:
+                sac = request.POST['sac']
+                hsn = None
             tax = request.POST['taxref']
             gstTax = 0 if tax == 'non taxable' else request.POST['intra_st']
             igstTax = 0 if tax == 'non taxable' else request.POST['inter_st']
@@ -1952,6 +1957,7 @@ def Fin_createNewItem(request):
                     item_type = type,
                     unit = unit,
                     hsn = hsn,
+                    sac = sac,
                     tax_reference = tax,
                     intra_state_tax = gstTax,
                     inter_state_tax = igstTax,
@@ -2163,7 +2169,12 @@ def Fin_updateItem(request,id):
             name = request.POST['name']
             type = request.POST['type']
             unit = request.POST.get('unit')
-            hsn = int(request.POST['hsn'])
+            if request.POST['hsn']:
+                hsn = request.POST['hsn']
+                sac = None
+            elif request.POST['sac']:
+                sac = request.POST['sac']
+                hsn = None
             tax = request.POST['taxref']
             gstTax = 0 if tax == 'non taxable' else request.POST['intra_st']
             igstTax = 0 if tax == 'non taxable' else request.POST['inter_st']
@@ -2198,6 +2209,7 @@ def Fin_updateItem(request,id):
                 item.item_type = type
                 item.unit = unit
                 item.hsn = hsn
+                item.sac = sac
                 item.tax_reference = tax
                 item.intra_state_tax = gstTax
                 item.inter_state_tax = igstTax

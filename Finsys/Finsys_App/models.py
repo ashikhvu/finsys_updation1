@@ -175,6 +175,7 @@ class Fin_Items(models.Model):
     item_type = models.CharField(max_length=100,null=True)
     unit = models.CharField(max_length=100,null=True)
     hsn = models.BigIntegerField(null=True, blank = True)
+    sac = models.BigIntegerField(null=True, blank = True)
     tax_reference = models.CharField(max_length=100,null=True)
     intra_state_tax = models.IntegerField(null=True, default=0)
     inter_state_tax = models.IntegerField(null=True, default=0)

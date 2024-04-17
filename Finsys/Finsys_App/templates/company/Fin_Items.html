@@ -51,7 +51,7 @@
           <tr>
             <th>SL.NO.</th>
             <th>NAME</th>
-            <th>HSN</th>
+            <th>HSN/SAC</th>
             <th>SALES RATE</th>
             <th>PURCHASE RATE</th>
             <th>STOCK ON INVENTORY</th>
@@ -64,7 +64,7 @@
           <tr class="clickable-row" data-href="Fin_view_item/{{ a.id }}" style="cursor: pointer;">
             <td>{{ forloop.counter }}</td>
             <td>{{ a.name }}</td>
-            <td>{{ a.hsn }}</td>
+            <td>{% if a.hsn %}{{ a.hsn }}{% else %}{{ a.sac }}{% endif %}</td>
             <td>{{ a.selling_price }}</td>
             <td>{{ a.purchase_price }}</td>
             <td>{{ a.opening_stock }}</td>
