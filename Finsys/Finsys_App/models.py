@@ -1288,6 +1288,7 @@ class Fin_Estimate_Items(models.Model):
     Estimate = models.ForeignKey(Fin_Estimate,on_delete=models.CASCADE, null=True)
     Item = models.ForeignKey(Fin_Items,on_delete=models.SET_NULL, null=True)
     hsn = models.IntegerField(null=True, blank=True)
+    sac = models.IntegerField(null=True, blank=True)
     quantity = models.IntegerField(default=0, null=True)
     price = models.FloatField(default=0.0, null=True, blank=True)
     total = models.FloatField(default=0.0, null=True, blank=True)

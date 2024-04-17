@@ -1946,9 +1946,12 @@ def Fin_createNewItem(request):
             if Fin_Items.objects.filter(Company=com, name__iexact=name).exists():
                 res = f'<script>alert("{name} already exists, try another!");window.history.back();</script>'
                 return HttpResponse(res)
-            elif Fin_Items.objects.filter(Company = com, hsn__iexact = hsn).exists():
-                res = f'<script>alert("HSN - {hsn} already exists, try another.!");window.history.back();</script>'
-                return HttpResponse(res)
+            elif Fin_Items.objects.filter(Q(Company=com) & (Q(hsn__iexact=hsn) & Q(hsn__isnull=False))).exists():
+                res = f"HSN - {hsn} already exists, try another.!"
+                return JsonResponse({'status': False, 'message':res})
+            elif Fin_Items.objects.filter(Q(Company=com) & (Q(sac__iexact=sac) & Q(sac__isnull=False))).exists():
+                res = f"SAC - {sac} already exists, try another.!"
+                return JsonResponse({'status': False, 'message':res})
             else:
                 item = Fin_Items(
                     Company = com,
@@ -7002,7 +7005,9 @@ def Fin_getInvItemDetails(request):
         context = {
             'status':True,
             'id': item.id,
+            'item_type':item.item_type,
             'hsn':item.hsn,
+            'sac':item.sac,
             'sales_rate':item.selling_price,
             'purchase_rate':item.purchase_price,
             'avl':item.current_stock,
@@ -7400,7 +7405,12 @@ def Fin_createInvoiceItem(request):
         name = request.POST['name']
         type = request.POST['type']
         unit = request.POST.get('unit')
-        hsn = request.POST['hsn']
+        if request.POST['hsn']:
+            hsn = request.POST['hsn']
+            sac = None
+        elif request.POST['sac']:
+            sac = request.POST['sac']
+            hsn = None
         tax = request.POST['taxref']
         gstTax = 0 if tax == 'non taxable' else request.POST['intra_st']
         igstTax = 0 if tax == 'non taxable' else request.POST['inter_st']
@@ -7420,8 +7430,11 @@ def Fin_createInvoiceItem(request):
         if Fin_Items.objects.filter(Company=com, name__iexact=name).exists():
             res = f"{name} already exists, try another!"
             return JsonResponse({'status': False, 'message':res})
-        elif Fin_Items.objects.filter(Company = com, hsn__iexact = hsn).exists():
+        elif Fin_Items.objects.filter(Q(Company=com) & (Q(hsn__iexact=hsn) & Q(hsn__isnull=False))).exists():
             res = f"HSN - {hsn} already exists, try another.!"
+            return JsonResponse({'status': False, 'message':res})
+        elif Fin_Items.objects.filter(Q(Company=com) & (Q(sac__iexact=sac) & Q(sac__isnull=False))).exists():
+            res = f"SAC - {sac} already exists, try another.!"
             return JsonResponse({'status': False, 'message':res})
         else:
             item = Fin_Items(
@@ -7431,6 +7444,7 @@ def Fin_createInvoiceItem(request):
                 item_type = type,
                 unit = unit,
                 hsn = hsn,
+                sac=sac,
                 tax_reference = tax,
                 intra_state_tax = gstTax,
                 inter_state_tax = igstTax,
@@ -13397,18 +13411,27 @@ def Fin_createEstimate(request):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
             discount = request.POST.getlist("discount[]")
             total = request.POST.getlist("total[]")
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
                 mapped = list(mapped)
                 for ele in mapped:
                     itm = Fin_Items.objects.get(id = int(ele[0]))
-                    Fin_Estimate_Items.objects.create(Estimate = Estimate, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                    if ele[2] == '':
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '':
+                        sac = None
+                    else:
+                        sac = ele[3]
+                    Fin_Estimate_Items.objects.create(Estimate = Estimate, Item = itm, hsn = hsn,sac = sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
                     # itm.current_stock -= int(ele[3])
                     # itm.save()
             
