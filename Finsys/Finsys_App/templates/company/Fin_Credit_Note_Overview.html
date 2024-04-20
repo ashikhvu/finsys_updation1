@@ -295,7 +295,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
 
 <div class="page-content " id="page-content">
-    <span class="d-flex justify-content-end p-2" style="cursor: pointer;" onclick="window.location.href=`{% url 'deliverylist' %}`"><i class="fa fa-times-circle text-white" style="font-size: 1.2rem;"></i></span>
+    <span class="d-flex justify-content-end p-2" style="cursor: pointer;" onclick="window.location.href=`{% url 'Fin_creditNotes' %}`"><i class="fa fa-times-circle text-white" style="font-size: 1.2rem;"></i></span>
     <div class="card radius-15">
         <div class="card-body" style="width:100%;">
             <div class="card-title">
@@ -307,22 +307,29 @@
                             <a style="padding: 10px; cursor: pointer; border-radius: 1vh;" onclick="slip()" id="slipBtn" > Slip</a>
                         </div> 
 
-                        <div class="col-md-6  justify-content-end " style="text-align: right;">
-                         
-                            <a onclick="tempPDF()" class="ml-2 btn btn-outline-secondary text-grey fa fa-file" role="button" id="pdfBtn" style="display: none;"> &nbsp;PDF</a> 
+                        <div class="col-md-6 d-flex justify-content-end " style="text-align: right;">
+                            {% if credit.status == 'Draft' %}
+                            <div class="dropdown p-0 nav-item"  id="convertBtn" style="display: block;">
+                                <li  class="dropdown-toggle btn btn-outline-secondary text-grey fa fa-exchange" data-toggle="dropdown">&nbsp;Convert</li>
+                                <ul class="dropdown-menu" style="background-color: black;" id="">
+                                    <a class="dropdown-item" href="{% url 'Fin_convertCreditNote' credit.id %}">Saved</a>
+                                </ul>
+                            </div>
+                            {% endif %}
+                            <a href="{% url 'Fin_creditNotePdf' credit.id %}" class="ml-2 btn btn-outline-secondary text-grey fa fa-file" role="button" id="pdfBtn" style="display: none;"> &nbsp;PDF</a> 
                             <a class="ml-2 btn btn-outline-secondary text-grey fa fa-file" role="button" onclick="slipPDF()" id="slipPdfBtn" style="display: none;"> &nbsp;PDF</a> 
                             <a class="ml-2 btn btn-outline-secondary text-grey fa fa-print" role="button" id="printBtn" style="display: none; " onclick="printSection('whatToPrint')">&nbsp;Print</a>
                            
-                            <a href="{% url 'Fin_editchallanto' estimate.id %}" class="ml-2 fa fa-pencil btn btn-outline-secondary text-grey" id="" role="button">&nbsp;Edit</a>
-                            <a href="{% url 'Fin_deleteChallan' estimate.id %}" class="ml-2 btn btn-outline-secondary text-grey fa fa-trash" id="deleteBtn" role="button" onclick="return confirm('Are you sure you want to delete Delivery Challan - {{estimate.challan_no}}.?')">&nbsp;Delete</a>
+                            <a href="{% url 'Fin_editCreditNote' credit.id %}" class="ml-2 fa fa-pencil btn btn-outline-secondary text-grey" id="editBtn" role="button">&nbsp;Edit</a>
+                            <a href="{% url 'Fin_deleteCreditNote' credit.id %}" class="ml-2 btn btn-outline-secondary text-grey fa fa-trash" id="deleteBtn" role="button" onclick="return confirm('Are you sure you want to delete Credit Note - {{credit.creditnote_number}}.?')">&nbsp;Delete</a>
                             <a href=""  class="ml-2 btn btn-outline-secondary text-grey fa fa-comments" id="commentsBtn" role="button" data-toggle="modal" data-target="#commentModal">&nbsp;Comment</a>
-                            <a href=""  class="ml-2 btn btn-outline-secondary text-grey fa fa-history" id="historyBtn" role="button" data-toggle="modal" data-target="#history" >&nbsp;History</a>
+                            <a href="{% url 'Fin_creditNoteHistory' credit.id %}"  class="ml-2 btn btn-outline-secondary text-grey fa fa-history" id="historyBtn" role="button" >&nbsp;History</a>
                             <div class="dropdown p-0 nav-item"  id="attachBtn" style="display: block;">
                                 <li  class="ml-2 dropdown-toggle btn btn-outline-secondary text-grey fa fa-paperclip" data-toggle="dropdown">&nbsp;Attach</li>
                                 <ul class="dropdown-menu" style="background-color: black;">
                                     <a class="dropdown-item fa fa-paperclip" style="cursor: pointer;" data-toggle="modal" data-target="#attachFileModal">&nbsp; Attach file</a>
-                                    {% if estimate.document %}
-                                    <a class="dropdown-item fa fa-download" style="cursor: pointer;" download  href="{{ estimate.document.url }}">&nbsp; Download file</a>
+                                    {% if credit.document %}
+                                    <a class="dropdown-item fa fa-download" style="cursor: pointer;" download  href="{{ credit.document.url }}">&nbsp; Download file</a>
                                     {% endif %}
                                 </ul>
                             </div>
@@ -333,19 +340,11 @@
                                     <li style="text-align: center;color: #e5e9ec; cursor: pointer;" data-toggle="modal" data-target="#shareToEmail">Email</li>
                                 </ul>
                             </div>
-                            {% if estimate.status == 'Draft' %}
-                            <div class="dropdown p-0 nav-item"  id="convertBtn" style="display: block;">
-                                <li  class="dropdown-toggle btn btn-outline-secondary text-grey fa fa-exchange" data-toggle="dropdown">&nbsp;Convert</li>
-                                <ul class="dropdown-menu" style="background-color: black;" id="">
-                                    <a class="dropdown-item" href="{% url 'Fin_convertchallan' estimate.id %}">Saved</a>
-                                </ul>
-                            </div>
-                            {% endif %}
                         </div>
                     </div> 
                 </div>
                 <center>
-                    <h3 class="card-title">DELIVERY CHALLAN OVERVIEW</h3>
+                    <h3 class="card-title">CREDIT NOTE OVERVIEW</h3>
                 </center>
             </div>
         </div>
@@ -371,7 +370,7 @@
                                 <div class="card-title">
                                     <div class="row">
                                         <div class="col mt-3">
-                                            <h2 class="mb-0"># {{ estimate.estimate_no }}</h2>
+                                            <h2 class="mb-0"># {{ credit.creditnote_number }}</h2>
                                         </div>
                                     </div>
                                 </div>
@@ -418,36 +417,74 @@
 
                                 <div class="row mb-4 d-flex justify-content-between align-items-center">
                                     <div class="col-md-4 mt-3">
-                                        <h5 style="border-bottom: 1px solid rgba(128, 128, 128, 0.6); width: fit-content;">Delivery Challan Details</h5>
+                                        <h5 style="border-bottom: 1px solid rgba(128, 128, 128, 0.6); width: fit-content;">Credit Note Details</h5>
                                     </div>
                                     <div class="col-md-4 mt-3"></div>
                                     <div class="col-md-4 mt-3"></div>
     
                                     <div class="col-md-3 mt-3">
-                                        <h6 class="mb-0">Challan No</h6>
+                                        <h6 class="mb-0">Credit Note No</h6>
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <p class="mb-0 text-right">{{ estimate.challan_no  }}</p>
+                                        <p class="mb-0 text-right">{{ credit.creditnote_number  }}</p>
                                     </div>
-    
-                                    <!-- <div class="col-md-3 mt-3 vl">
-                                        <h6 class="mb-0">Customer Name</h6>
+                                    
+                                    <div class="col-md-3 mt-3 vl">
+                                        <h6 class="mb-0">Reference Number </h6>
+                                    </div>
+                                    <div class="col-md-3 mt-3 ">
+                                        <p class="mb-0 text-right">{{credit.reference_number}}</p>
+                                    </div>
+                                    {% if credit.invoice_type and credit.invoice_number %}
+                                    <div class="col-md-3 mt-3">
+                                        <h6 class="mb-0">Invoice Type</h6>
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <p class="mb-0 text-right">{{estimate.Customer.title}}. {{estimate.Customer.first_name}} {{estimate.Customer.last_name}}</p>
-                                    </div> -->
-                                    <div class="col-md-3 mt-3 ">
-                                        <h6 class="mb-0">Challan Type</h6>
-                                    </div>
-                                    <div class="col-md-3 mt-3 ">
-                                        <p class="mb-0 text-right">{{estimate.challan_type}}</p>
+                                        <p class="mb-0 text-right">{{credit.invoice_type}}</p>
                                     </div>
                                     <div class="col-md-3 mt-3 vl">
-                                        <h6 class="mb-0">Challan Date</h6>
+                                        <h6 class="mb-0">Invoice Number</h6>
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <p class="mb-0 text-right">{{estimate.challan_date | date:'d-m-Y'}}</p>
+                                        <p class="mb-0 text-right">{{credit.invoice_number}}</p>
                                     </div>
+                                    {% endif %}
+                                    <div class="col-md-3 mt-3">
+                                        <h6 class="mb-0">Credit Note Date</h6>
+                                    </div>
+                                    <div class="col-md-3 mt-3">
+                                        <p class="mb-0 text-right">{{credit.creditnote_date | date:'d-m-Y'}}</p>
+                                    </div>
+                                    <div class="col-md-3 mt-3 vl">
+                                        <h6 class="mb-0">Payment type </h6>
+                                    </div>
+                                    <div class="col-md-3 mt-3 ">
+                                        <p class="mb-0 text-right">{{credit.payment_type}}</p>
+                                    </div>
+                                    {% if credit.payment_type == "Cheque" %}
+                                    <div class="col-md-3 mt-3">
+                                        <h6 class="mb-0">Cheque Number</h6>
+                                    </div>
+                                    <div class="col-md-3 mt-3">
+                                        <p class="mb-0 text-right">{{credit.cheque_number}}</p>
+                                    </div>
+                                    {% endif %}
+                                    {% if credit.payment_type == "UPI" %}
+                                    <div class="col-md-3 mt-3">
+                                        <h6 class="mb-0">Upi Number</h6>
+                                    </div>
+                                    <div class="col-md-3 mt-3">
+                                        <p class="mb-0 text-right">{{credit.upi_id}}</p>
+                                    </div>
+                                    {% endif %}
+                                    {% if credit.payment_type != "UPI" and credit.payment_type != "Cheque" and credit.payment_type != "Cash" %}
+                                    <div class="col-md-3 mt-3">
+                                        <h6 class="mb-0">Account Number</h6>
+                                    </div>
+                                    <div class="col-md-3 mt-3">
+                                        <p class="mb-0 text-right">{{credit.bank_account}}</p>
+                                    </div>
+                                    {% endif %}
                                     
                                 </div>
                                 <hr class="my-4">
@@ -462,66 +499,50 @@
                                         <h6 class="mb-0">Customer Name</h6>
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <p class="mb-0 text-right">{{estimate.Customer.title}}. {{estimate.Customer.first_name}} {{estimate.Customer.last_name}}</p>
+                                        <p class="mb-0 text-right">{{credit.Customer.title}}. {{credit.Customer.first_name}} {{credit.Customer.last_name}}</p>
                                     </div>
     
                                     <div class="col-md-3 mt-3 vl">
                                         <h6 class="mb-0">Customer Email</h6>
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <p class="mb-0 text-right">{{estimate.Customer.email}}</p>
+                                        <p class="mb-0 text-right">{{credit.Customer.email}}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-3 mt-3">
+                                        <h6 class="mb-0">GST Type</h6>
+                                        <!-- <h6 class="mb-0">GSTIN No</h6> -->
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <h6 class="mb-0">GSTIN No</h6>
-                                    </div>
-                                    <div class="col-md-3 mt-3">
-                                        <p class="mb-0 text-right">{{estimate.Customer.gstin}}</p>
+                                        <!-- <p class="mb-0 text-right">{{credit.Customer.gstin}}</p> -->
+                                        <p class="mb-0" style="text-align: right;">{{credit.gst_type}}</p>
                                     </div>
 
                                     <div class="col-md-3 mt-3 vl">
-                                        <h6 class="mb-0">Gst type</h6>
+                                        <h6 class="mb-0">GSTIN No</h6>
+                                       
                                     </div>
                                     <div class="col-md-3 mt-3">
-                                        <p class="mb-0">{{estimate.Customer.gst_type}}</p>
+                                        <p class="mb-0 text-right">{{credit.gstin}}</p>
+                                        <!-- <p class="mb-0" style="text-align: right;">{{credit.Customer.gst_type}}</p> -->
                                     </div>
                                 </div>
                             
                                 <div class="row mb-4 d-flex justify-content-between align-items-center">
-                                    
-                                    <!-- <div class="row mb-4 d-flex justify-content-start align-items-center"> -->
-                                            
-                                        <div class="col-md-3 mt-3"> 
-                                            <h6 class="mb-0">Address</h6>
-                                        </div>
-                                        <div class="col-md-3 mt-3 ">
-                                            <p class="mb-0 text-right">{{estimate.billing_address}}</p>
-                                        </div>
-                                    </div>
-                                    
-                                <!-- </div> -->
-                                
-                                <!-- <div class="row mb-4 d-flex justify-content-start align-items-center">
                                     <div class="col-md-3 mt-3"> 
-                                        <h6 class="mb-0"></h6>
+                                        <h6 class="mb-0">Address</h6>
                                     </div>
-                                    <div class="col-md-3 mt-3 vr">
-                                        
+                                    <div class="col-md-3 mt-3 ">
+                                        <p class="mb-0 text-right">{{credit.billing_address}}</p>
                                     </div>
-                                    <div class="col-md-3 mt-3 vl">
-                                        <h6 class="mb-0">&nbsp;</h6>
-                                    </div>
-                                    <div class="col-md-3 mt-3">
-                                         <p class="mb-0 text-right">{{estimate.payment_method}}</p> -->
-                                    <!-- </div>
-                                </div> \ -->
-                                
+                                </div>
                                 <hr>
 
                                 <div class="row mb-4 d-flex justify-content-between align-items-center">
                                     <div class="col-md-12 mt-3">
                                         <h5 style="border-bottom: 1px solid rgba(128, 128, 128, 0.6); width: fit-content;">Items Details</h5>
     
-                                        {% for itm in estItems %}
+                                        {% for itm in creditItems %}
                                             <div class="row mb-4 d-flex justify-content-between align-items-center">
                                                 <div class="col-md-3 mt-3">
                                                     <h6 class="mb-0">Name</h6>
@@ -530,38 +551,39 @@
                                                     <p class="mb-0 text-right">{{itm.items.name}}</p>
                                                 </div>
                                                 <div class="col-md-3 mt-3 vl">
-                                                    <h6 class="mb-0">Rate</h6>
-                                                </div>
-                                                <div class="col-md-3 mt-3">
-                                                    <p class="mb-0 text-right">{{itm.items.selling_price}}</p>
-                                                </div>
-                                                <div class="col-md-3 mt-3">
-                                                    <h6 class="mb-0">Tax Amount</h6>
-                                                </div>
-                                                <div class="col-md-3 mt-3">
-                                                    <p class="mb-0 text-right">{{itm.tax_rate}} %</p>
-                                                </div>
-                
-                                                <div class="col-md-3 mt-3 vl">
                                                     <h6 class="mb-0">{% if itm.items.item_type == 'Goods' %} HSN {% else %} SAC {% endif %}</h6>
                                                 </div>
                                                 <div class="col-md-3 mt-3">
                                                     <p class="mb-0 text-right">{% if itm.items.item_type == 'Goods' %} {{ itm.hsn }} {% else %} {{ itm.sac }} {% endif %}</p>
                                                 </div>
+                                                <div class="col-md-3 mt-3 ">
+                                                    <h6 class="mb-0"> Quantity</h6>
+                                                </div>
+                                                <div class="col-md-3 mt-3">
+                                                    <p class="mb-0 text-right"> {{ itm.quantity }}</p>
+                                                </div>
+                                                <div class="col-md-3 mt-3 vl">
+                                                    <h6 class="mb-0"> Rate</h6>
+                                                </div>
+                                                <div class="col-md-3 mt-3">
+                                                    <p class="mb-0 text-right"> {{itm.items.purchase_price}}   </p>
+                                                </div>
+                
+                                             
                                                 
                                             </div>
                                             <div class="row mb-4 d-flex justify-content-between align-items-center">
                                                 <div class="col-md-3 mt-3 "> 
+                                                    <h6 class="mb-0"> Tax Amount</h6>
+                                                </div>
+                                                <div class="col-md-3 mt-3">
+                                                    <p class="mb-0 text-right">{{itm.tax_rate}} % </p>
+                                                </div>
+                                                <div class="col-md-3 mt-3 vl">
                                                     <h6 class="mb-0">Discount</h6>
                                                 </div>
                                                 <div class="col-md-3 mt-3">
                                                     <p class="mb-0 text-right">{{itm.discount}}</p>
-                                                </div>
-                                                <div class="col-md-3 mt-3 vl">
-                                                    <h6 class="mb-0">Quantity</h6>
-                                                </div>
-                                                <div class="col-md-3 mt-3">
-                                                    <p class="mb-0 text-right">{{ itm.quantity }}</p>
                                                 </div>
                                             </div>
                                             <div class="row mb-4 d-flex justify-content-start align-items-center">
@@ -595,56 +617,67 @@
                     <div class="col-lg-4 bg-grey">
 
                         <div class="px-3">
-                            <h4 class="fw-bold mb-2 mt-4 pt-1">Delivery Challan Tax Details</h4>
+                            <h4 class="fw-bold mb-2 mt-4 pt-1">Credit Note Tax Details</h4>
                             <hr class="my-4">
                             <div class="d-flex justify-content-between mb-4">
-                                <h6 class="">Challan Status</h6>
-                                {% if estimate.status == 'Draft' %} <span class="text-info h5 font-weight-bold">DRAFT</span> {% else %} <span class="text-success h5 font-weight-bold">SAVED</span> {% endif %}
+                                <h6 class="">Credit Note Status</h6>
+                                {% if credit.status == 'Draft' %} <span class="text-info h5 font-weight-bold">DRAFT</span> {% else %} <span class="text-success h5 font-weight-bold">SAVED</span> {% endif %}
                             </div>
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">Sub Total</h6>
-                                {{ estimate.subtotal }}
+                                {{ credit.subtotal }}
                             </div>
-                            <div class="d-flex justify-content-between mb-4">
-                                <h6 class="">Tax Amount</h6>
-                                {{estimate.tax_amount }}
-                            </div>
-                            {%if estimate.igst != 0 %}
+                          
+                            {%if credit.igst != 0 %}
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">IGST</h6>
-                                {{ estimate.igst }}
+                                {{ credit.igst }}
                             </div>
                             {%endif%}
-                            {%if estimate.cgst != 0 %}
+                            {%if credit.cgst != 0 %}
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">CGST</h6>
-                                {{ estimate.cgst }}
+                                {{ credit.cgst }}
                             </div>
                             {%endif%}
-                            {%if estimate.sgst != 0 %}
+                            {%if credit.sgst != 0 %}
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">SGST</h6>
-                                {{ estimate.sgst }}
+                                {{ credit.sgst }}
                             </div>
                             {%endif%}
-                            {% if estimate.shipping_charge != 0 %}
+                            {% if credit.shipping_charge != 0 %}
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">Shipping Charge</h6>
-                                {{ estimate.shipping_charge}}
+                                {{ credit.shipping_charge}}
                             </div>
                             {% endif %}
-                            {% if estimate.adjustment != 0 %}
+                            {% if credit.adjustment != 0 %}
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">Adjustment</h6>
-                                {{estimate.adjustment }}
+                                {{credit.adjustment }}
                             </div>
                             {% endif %}
-                            <hr class="my-4">
+
+                            <div class="d-flex justify-content-between mb-4">
+                                <h6 class="">Tax Amount</h6>
+                                {{credit.tax_amount }}
+                            </div>
+                        
+                          
                             <div class="d-flex justify-content-between mb-4">
                                 <h6 class="">Grand Total</h6>
-                                <span class="font-weight-bold">{{ estimate.grandtotal }}</span>
+                                <span class="font-weight-bold">{{ credit.grandtotal }}</span>
                             </div>
-                            
+                            <hr class="my-4">
+                            <div class="d-flex justify-content-between mb-4">
+                                <h6 class="">Paid</h6>
+                                {{credit.paid }}
+                            </div>
+                            <div class="d-flex justify-content-between mb-4">
+                                <h6 class="">Balance</h6>
+                                {{credit.balance }}
+                            </div>
                         </div>
 
                     </div>
@@ -666,10 +699,10 @@
                                     </div>
                                     <div class="top-left">
                                         <div class="graphic-path">
-                                            <p>Challan</p>
+                                            <p style="font-size: 12px;">Credit Note</p>
                                         </div>
                                         <div class="position-relative">
-                                            <p> Challan No. <span>{{ estimate.challan_no }}</span></p>
+                                            <p> Credit Note No. <span>{{ credit.creditnote_number }}</span></p>
                                         </div>
                                     </div>
                                 </section>
@@ -689,17 +722,17 @@
                                             </div>
                                             <div class="col-5" >
                                                 <p style="text-align: right;">TO,</p>
-                                                <h5 style="text-align: right;">{{estimate.Customer.title}} {{estimate.Customer.first_name}} {{estimate.Customer.last_name}}</h5>
-                                                <p class="address " style="text-align: right;" > {{ estimate.billing_address}} </p>
+                                                <h5 style="text-align: right;">{{credit.Customer.title}} {{credit.Customer.first_name}} {{credit.Customer.last_name}}</h5>
+                                                <p class="address " style="text-align: right;" > {{ credit.billing_address}} </p>
                                                 
                                             </div>
                                         </div>
                                         <div class="row extra-info pt-3">
                                             <div class="col-6">
-                                                <p>Challan Date: <span>{{estimate.challan_date | date:'d-m-Y'}}</span></p>
+                                                <p>Credit Note Date: <span>{{credit.creditnote_date | date:'d-m-Y'}}</span></p>
                                             </div>
                                             <!-- <div class="col-6">
-                                                <p>Expiration Date : <span>{{estimate.exp_date | date:'d-m-Y'}}</span></p>
+                                                <p>Expiration Date : <span>{{credit.exp_date | date:'d-m-Y'}}</span></p>
                                             </div> -->
                                         </div>
                                     </div>
@@ -720,7 +753,7 @@
                                         </thead>
                                         <tbody>
             
-                                            {% for j in estItems %}
+                                            {% for j in creditItems %}
                                             <tr>
                                                 <td style="color:black; text-align: center;">{{j.items.name}}</td>
                                                 <td style="color:black">{{j.hsn}}</td>
@@ -744,50 +777,51 @@
                                                     <tr >
                                                         <td style="color: #000;">Sub Total</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.subtotal}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.subtotal}}</td>
                                                     </tr>
                                                     
-                                                    {% if estimate.igst != 0 %}
+                                                    {% if credit.igst != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">IGST</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.igst}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.igst}}</td>
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.cgst != 0 %}
+                                                    {% if credit.cgst != 0 %}
                                                     <tr>
                                                         <td style="color: #000;">CGST</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.cgst}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.cgst}}</td>
                                                         
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.sgst != 0 %}
+                                                    {% if credit.sgst != 0 %}
                                                     <tr>
                                                         <td style="color: #000;">SGST</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.sgst}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.sgst}}</td>
                                                     </tr>
                                                     {% endif %}
                                                     <tr >
                                                         <td style="color: #000;">Tax Amount</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.tax_amount}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.tax_amount}}</td>
                                                     </tr>
-                                                    {% if estimate.shipping_charge != 0 %}
+                                                    {% if credit.shipping_charge != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">Shipping Charge</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.shipping_charge}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.shipping_charge}}</td>
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.adjustment != 0 %}
+                                                    {% if credit.adjustment != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">Adjustment</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.adjustment}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.adjustment}}</td>
                                                     </tr>
                                                     {% endif %}
+                                                    
                                                 </tbody>
             
                                             </table>
@@ -797,7 +831,7 @@
                                                     <tr >
                                                         <th style="color: #000;">Grand Total</th>
                                                         <th style="color: #000;">:</th>
-                                                        <th class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.grandtotal}}</th>
+                                                        <th class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.grandtotal}}</th>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -818,11 +852,11 @@
                                       <div class="text-white d-flex align-items-center px-5" style="border-radius: 1vh; background-color:#99999900"><!----></div>
                                   </div>
                                   <div class="col-md-4 d-flex justify-content-center">
-                                      <center class="h3 text-white"><b>DELIVERY CHALLAN</b></center>
+                                      <center class="h3 text-white"><b>CREDIT NOTE</b></center>
                                   </div>  
                                   <div class="col-md-4 d-flex justify-content-end">
                                       <div class="text-white">
-                                          <p class="mb-0 mt-2">CHALLAN No: <b>{{estimate.challan_no }}</b></p>
+                                          <p class="mb-0 mt-2">Credit Note No: <b>{{credit.creditnote_number }}</b></p>
                                       </div>
                                   </div>
                               </div>
@@ -846,13 +880,13 @@
                                               <div class="col-4"></div>
                                               <div class="col-4 pr-0">
                                                   <label class="text-white w-100 p-1" style="border-top-right-radius: 4vh; border-bottom-right-radius: 4vh; background-color: #999999;" ><b>SHIPPING ADDRESS</b></label>
-                                                  <h5 class="text-secondary" style="font-weight: bold;">{{estimate.Customer.title}} {{estimate.Customer.first_name}} {{estimate.Customer.last_name}}</h5>
-                                                  <p class="address" style="font-weight: bold;color: #000;">{{ estimate.billing_address | linebreaksbr}} </p>
+                                                  <h5 class="text-secondary" style="font-weight: bold;">{{credit.Customer.title}} {{credit.Customer.first_name}} {{credit.Customer.last_name}}</h5>
+                                                  <p class="address" style="font-weight: bold;color: #000;">{{ credit.billing_address | linebreaksbr}} </p>
                                               </div>
                                           </div>
                                           <div class="row my-3">
                                             <div class="col-12">
-                                                <p>Challan Date: <span>{{estimate.challan_date}}</span></p>
+                                                <p>Credit note Date: <span>{{credit.creditnote_date}}</span></p>
                                             </div>
                                           </div>
                                           
@@ -873,7 +907,7 @@
                                               </tr>
                                           </thead>
                                           <tbody  style="background-color: #999999;">
-                                              {% for itm in estItems %}
+                                              {% for itm in creditItems %}
                                                   <tr>
                                                       <td class="text-center" style="color:black">{{ itm.items.name}}</td>
                                                       <td class="text-center" style="color:black">{{ itm.hsn }}</td>
@@ -894,11 +928,11 @@
                                           <div class="col-4">
                                               <table class="table table-borderless">
                                                   <tbody>
-                                                      {% if estimate.note %}
+                                                      {% if credit.note %}
                                                       <tr >
                                                           <td style="color: #000;text-align: left;">Note</td>
                                                           <td style="color: #000;text-align: left;">:</td>
-                                                          <th style="color: #000;text-align: center;">{{estimate.note}}</th>
+                                                          <th style="color: #000;text-align: center;">{{credit.note}}</th>
                                                       </tr>
                                                       {% endif %}
           
@@ -912,48 +946,48 @@
                                                       <tr >
                                                           <td style="color: #000;">Sub Total</td>
                                                           <td style="color: #000;">:</td>
-                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.subtotal}}</td>
+                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.subtotal}}</td>
                                                       </tr>
                                                       
-                                                      {% if estimate.igst != 0 %}
+                                                      {% if credit.igst != 0 %}
                                                       <tr >
                                                           <td style="color: #000;">IGST</td>
                                                           <td style="color: #000;">:</td>
-                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.igst}}</td>
+                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.igst}}</td>
                                                       </tr>
                                                       {% endif %}
-                                                      {% if estimate.cgst != 0 %}
+                                                      {% if credit.cgst != 0 %}
                                                       <tr>
                                                           <td style="color: #000;">CGST</td>
                                                           <td style="color: #000;">:</td>
-                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.cgst}}</td>
+                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.cgst}}</td>
                                                           
                                                       </tr>
                                                       {% endif %}
-                                                      {% if estimate.sgst != 0 %}
+                                                      {% if credit.sgst != 0 %}
                                                       <tr>
                                                           <td style="color: #000;">SGST</td>
                                                           <td style="color: #000;">:</td>
-                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.sgst}}</td>
+                                                          <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.sgst}}</td>
                                                       </tr>
                                                       {% endif %}
                                                       <tr >
                                                         <td style="color: #000;">Tax Amount</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.tax_amount}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.tax_amount}}</td>
                                                     </tr>
-                                                    {% if estimate.shipping_charge != 0 %}
+                                                    {% if credit.shipping_charge != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">Shipping Charge</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.shipping_charge}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.shipping_charge}}</td>
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.adjustment != 0 %}
+                                                    {% if credit.adjustment != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">Adjustment</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.adjustment}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.adjustment}}</td>
                                                     </tr>
                                                     {% endif %}
                                                   </tbody>
@@ -965,7 +999,7 @@
                                                       <tr >
                                                           <th style="color: #000;">Grand Total</th>
                                                           <th style="color: #000;">:</th>
-                                                          <th class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.grandtotal}}</th>
+                                                          <th class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.grandtotal}}</th>
                                                       </tr>
                                                   </tbody>
                                               </table>
@@ -984,7 +1018,7 @@
                             <div class="" id="printdiv3">
                                 <div class="row">
                                     <div class="col-sm-12" style="background-image: linear-gradient(#1b83e8, black); color: white;">
-                                        <p style="font-size: 4vh; text-align: center;">DELIVERY CHALLAN</p>
+                                        <p style="font-size: 4vh; text-align: center;">CREDIT NOTE</p>
                                         <p style=" text-align: center;"> {{cmp.Company_name}} <br>
                                             {{cmp.Address}} <br>
                                             {{cmp.City}},
@@ -999,8 +1033,8 @@
                                         <div class="col-5">
                                             <br><br><br>
                                             <p style="color:black;"> <span style=" font-weight: bold;">To: </span><br>
-                                            {{estimate.Customer.title}} {{estimate.Customer.first_name}} {{estimate.Customer.last_name}}<br>
-                                            {{estimate.billing_address|linebreaksbr }}
+                                            {{credit.Customer.title}} {{credit.Customer.first_name}} {{credit.Customer.last_name}}<br>
+                                            {{credit.billing_address|linebreaksbr }}
                                             </p>
                                         </div>
                                         <div class="col-md-1"></div>
@@ -1009,21 +1043,21 @@
                                             <table class="table table-borderless">
                                                 <tbody>
                                                     <tr >
-                                                        <td style="color: #000; font-weight: bold;">CHALLAN No.</td>
+                                                        <td style="color: #000; font-weight: bold;">Credit Note No.</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;">{{ estimate.challan_no }}</td>
+                                                        <td class="text-right" style="color: #000;">{{ credit.creditnote_number }}</td>
                                                     </tr>
 
                                                     <tr >
-                                                        <td style="color: #000; font-weight: bold;">Challan Date</td>
+                                                        <td style="color: #000; font-weight: bold;">Date</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;">{{estimate.challan_date | date:'d-m-Y'}}<td>
+                                                        <td class="text-right" style="color: #000;">{{credit.creditnote_date | date:'d-m-Y'}}<td>
                                                     </tr>
      
                                                     <tr>
                                                         <!-- <td style="color: #000; font-weight: bold;">Expiration Date</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;">{{estimate.exp_date | date:'d-m-Y'}}</td> -->
+                                                        <td class="text-right" style="color: #000;">{{credit.exp_date | date:'d-m-Y'}}</td> -->
                                                         
                                                     </tr>
                                                 </tbody>
@@ -1045,7 +1079,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {% for itm in estItems %}
+                                                {% for itm in creditItems %}
                                                     <tr>
                                                         <td class="text-center" style="color: black;">{{ itm.items.name}}</td>
                                                         <td class="text-center" style="color: black;">{{ itm.hsn }}</td>
@@ -1070,48 +1104,48 @@
                                                     <tr >
                                                         <td style="color: #000;">Sub Total</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.subtotal}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.subtotal}}</td>
                                                     </tr>
                                                     
-                                                    {% if estimate.igst != 0 %}
+                                                    {% if credit.igst != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">IGST</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.igst}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.igst}}</td>
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.cgst != 0 %}
+                                                    {% if credit.cgst != 0 %}
                                                     <tr>
                                                         <td style="color: #000;">CGST</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.cgst}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.cgst}}</td>
                                                         
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.sgst != 0 %}
+                                                    {% if credit.sgst != 0 %}
                                                     <tr>
                                                         <td style="color: #000;">SGST</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.sgst}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.sgst}}</td>
                                                     </tr>
                                                     {% endif %}
                                                     <tr >
                                                         <td style="color: #000;">Tax Amount</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.tax_amount}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.tax_amount}}</td>
                                                     </tr>
-                                                    {% if estimate.shipping_charge != 0 %}
+                                                    {% if credit.shipping_charge != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">Shipping Charge</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.shipping_charge}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.shipping_charge}}</td>
                                                     </tr>
                                                     {% endif %}
-                                                    {% if estimate.adjustment != 0 %}
+                                                    {% if credit.adjustment != 0 %}
                                                     <tr >
                                                         <td style="color: #000;">Adjustment</td>
                                                         <td style="color: #000;">:</td>
-                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.adjustment}}</td>
+                                                        <td class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.adjustment}}</td>
                                                     </tr>
                                                     {% endif %}
                                                 </tbody>
@@ -1123,7 +1157,7 @@
                                                     <tr >
                                                         <th style="color: #000;">Grand Total</th>
                                                         <th style="color: #000;">:</th>
-                                                        <th class="text-right" style="color: #000;"><span>&#8377; </span>{{estimate.grandtotal}}</th>
+                                                        <th class="text-right" style="color: #000;"><span>&#8377; </span>{{credit.grandtotal}}</th>
                                                     </tr>
                                                     <tr >
                                                 </tbody>
@@ -1157,20 +1191,20 @@
 
                         <div class="ml-4 mt-2" style="color: black;">
                             <div class="row">
-                                <div class="col-md-6 text-left">Challan No:</div>
-                                <div class="col-md-5 text-right">{{estimate.challan_no}}</div>
+                                <div class="col-md-6 text-left">Credit Note No:</div>
+                                <div class="col-md-5 text-right">{{credit.creditnote_number}}</div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 text-left">Customer Name:</div>
-                                <div class="col-md-5 text-right">{{estimate.Customer.first_name}} {{estimate.Customer.last_name}}</div>
+                                <div class="col-md-5 text-right">{{credit.Customer.first_name}} {{credit.Customer.last_name}}</div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6 text-left">Challan Date :</div>
-                                <div class="col-md-5 text-right">{{estimate.challan_date | date:'d-m-Y'}}</div>
+                                <div class="col-md-6 text-left"> Date :</div>
+                                <div class="col-md-5 text-right">{{credit.creditnote_date | date:'d-m-Y'}}</div>
                             </div>
                             <!-- <div class="row">
                                 <div class="col-md-6 text-left">Expiration Date:</div>
-                                <div class="col-md-5 text-right">{{estimate.exp_date | date:'d-m-Y'}}</div>
+                                <div class="col-md-5 text-right">{{credit.exp_date | date:'d-m-Y'}}</div>
                             </div> -->
                         </div>
 
@@ -1202,7 +1236,7 @@
                                 <hr style="border-bottom: 1px solid black; margin-top:1vh; width:65%;  margin-left: 10px;">
                             </div>
                         </div>
-                        {% for i in estItems %}
+                        {% for i in creditItems %}
                         <div class="equal-length-container" style="color: black; font-size: small; word-wrap: break-word; margin-bottom: 1vh;">
                             <div class="equal-length-item"  style="text-align: center; margin-left: 2px;">
                                 {{i.items.name}}
@@ -1228,49 +1262,49 @@
                         <div class="subtot mt-5">
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>Subtotal</span>
-                                <span><span>&#8377; </span>{{estimate.subtotal}}</span>
+                                <span><span>&#8377; </span>{{credit.subtotal}}</span>
                             </div>
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>Tax Amount</span>
-                                <span><span>&#8377; </span>{{estimate.tax_amount}}</span>
+                                <span><span>&#8377; </span>{{credit.tax_amount}}</span>
                             </div>
-                            {% if estimate.igst == 0 %}
+                            {% if credit.igst == 0 %}
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>CGST</span>
-                                <span><span>&#8377; </span>{{estimate.cgst}}</span>
+                                <span><span>&#8377; </span>{{credit.cgst}}</span>
                             </div>
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>SGST</span>
-                                <span><span>&#8377; </span>{{estimate.sgst}}</span>
+                                <span><span>&#8377; </span>{{credit.sgst}}</span>
                             </div>
                             {% else %}
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>IGST</span>
-                                <span><span>&#8377; </span>{{estimate.igst}}</span>
+                                <span><span>&#8377; </span>{{credit.igst}}</span>
                             </div>
                             {% endif %}
-                            {% if estimate.adjustment != 0 %}
+                            {% if credit.adjustment != 0 %}
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>Adjustment</span>
-                                <span><span>&#8377; </span>{{estimate.adjustment}}</span>
+                                <span><span>&#8377; </span>{{credit.adjustment}}</span>
                             </div>
                             {% endif %}
-                            {% if estimate.shipping_charge != 0 %}
+                            {% if credit.shipping_charge != 0 %}
                             <div class="subtot-item d-flex justify-content-between">
                                 <span>Shipping</span>
-                                <span><span>&#8377; </span>{{estimate.shipping_charge}}</span>
+                                <span><span>&#8377; </span>{{credit.shipping_charge}}</span>
                             </div>
                             {% endif %}
                         </div>
                         <div class="divider"></div>
                         <div class="grandtot fw-bold d-flex justify-content-between">
                             <span><strong>TOTAL</strong></span>
-                            <span><strong><span>&#8377; </span>{{estimate.grandtotal}}</strong></span>
+                            <span><strong><span>&#8377; </span>{{credit.grandtotal}}</strong></span>
                         </div>
                         <div class="divider"></div>
                         <div class="paid-by mb-4 d-flex justify-content-between">
                             <span>Paid By:</span>
-                            <span>{{estimate.payment_method}}</span>
+                            <span>{{credit.payment_method}}</span>
                         </div>
                         <div class="createdby d-flex justify-content-between">
                             <p class="">Created By:</p>
@@ -1306,7 +1340,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form action="{% url 'Fin_attachchallanFile' estimate.id %}" method="post" enctype="multipart/form-data" class="needs-validation">
+            <form action="{% url 'Fin_attachCreditNoteFile' credit.id %}" method="post" enctype="multipart/form-data" class="needs-validation">
                 <div class="modal-body">
                     <div class="card p-3">
                         
@@ -1332,14 +1366,14 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
-                <h5 class="m-3">Share Delivery Challan</h5>
+                <h5 class="m-3">Share Credit Note</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="card p-3">
-                    <form action="{% url 'Fin_sharechallanToEmail' estimate.id %}" method="post" class="needs-validation" id="share_to_email_form">
+                    <form action="{% url 'Fin_shareCreditNoteToEmail' credit.id %}" method="post" class="needs-validation" id="share_to_email_form">
                         {% csrf_token %}
                         <div class="form-group">
                             <label for="emailIds">Email IDs</label>
@@ -1347,7 +1381,7 @@
                         </div>
                         <div class="form-group mt-2">
                             <label for="item_unitname">Message(optional)</label>
-                            <textarea name="email_message" id="email_message" class="form-control" cols="" rows="4" placeholder="This message will be sent along with Challan details."></textarea>
+                            <textarea name="email_message" id="email_message" class="form-control" cols="" rows="4" placeholder="This message will be sent along with Credit note details."></textarea>
                         </div>
                     </form>
                 </div>
@@ -1370,7 +1404,7 @@
                 </button>
             </div>
 
-            <form action="{% url 'Fin_addchallanComment' estimate.id %}" method="post">
+            <form action="{% url 'Fin_addCreditNoteComment' credit.id %}" method="post">
                 {% csrf_token %}
                 <div class="modal-body">
                     <textarea type="text" class="form-control" name="comment" placeholder="Add Comments.." required></textarea>
@@ -1391,7 +1425,7 @@
                                 <tr class="">
                                     <td class="text-center">{{forloop.counter }}</td>
                                     <td class="text-center">{{c.comments}}</td>
-                                    <td class="text-center"><a class="text-danger" href="{% url 'Fin_deletechallanComment' c.id %}" onclick="return confirm('Are you sure you want to delete.?')"><i class="fa fa-trash" style="font-size: 1.1rem;"></i></a></td>
+                                    <td class="text-center"><a class="text-danger" href="{% url 'Fin_deleteCreditNoteComment' c.id %}" onclick="return confirm('Are you sure you want to delete.?')"><i class="fa fa-trash" style="font-size: 1.1rem;"></i></a></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1688,12 +1722,12 @@
     }
 
     function slipPDF(){
-        var estimateNo = `{{estimate.challan_no }}`;
+        var creditNoteNo = `{{credit.creditnote_number }}`;
         var element = document.getElementById('slip');
         var opt =
         {
             margin: 1,
-            filename: 'Delivery_Challan'+ estimateNo + '.pdf',
+            filename: 'Credit_Note'+ creditNoteNo + '.pdf',
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
@@ -1701,16 +1735,16 @@
         html2pdf().set(opt).from(element).save();
     }
     function tempPDF() {
-    var estimateNo = `{{estimate.challan_no }}`;
-    var element = document.getElementById('whatToPrint');
-    var opt = {
-        margin: 1,
-        filename: 'Delivery_Challan' + estimateNo + '.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // Updated to A4 size
-    };
-    html2pdf().set(opt).from(element).save();
+        var estimateNo = `{{credit.creditnote_number }}`;
+        var element = document.getElementById('whatToPrint');
+        var opt = {
+            margin: 1,
+            filename: 'Credit_Note' + estimateNo + '.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // Updated to A4 size
+        };
+        html2pdf().set(opt).from(element).save();
 }
 
 </script>

@@ -400,6 +400,8 @@
                                                 {% for i in itm %}
                                                     <option value="{{i.id}}" 
                                                     data-hsn="{{i.hsn}}"
+                                                    data-sac="{{ i.sac }}"
+                                                    data-item_type="{{ i.item_type }}"
                                                     data-stock="{{i.temp_stock}}" 
                                                     data-price="{{i.purchase_price}}"
                                                     data-intra="{{i.intra_state_tax}}"
@@ -413,7 +415,8 @@
                                     </td>
 
                                     <td style="width:12%">
-                                        <input type="text" name='hsn[]' id="hsn{{forloop.counter}}" class="form-control border-secondary HSNCODE" value="{{p.item.hsn}}" readonly />
+                                        <input type="text" name='hsn[]' id="hsn{{forloop.counter}}" class="form-control border-secondary HSNCODE" value="{{p.item.hsn}}" readonly style="{% if not p.item.hsn %}display:none;{% endif %}"/>
+                                        <input type="text" name='sac[]' id="sac{{forloop.counter}}" class="form-control border-secondary SACCODE" value="{{p.item.sac}}" readonly style="{% if not p.item.sac %}display:none;{% endif %}"/>
                                     </td>
 
                                     <td style="width:13%">
@@ -1594,10 +1597,15 @@
                                                         <a class="btn btn-outline-secondary" id="new_unit_btn">+</a>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-6 mt-3">
+                                                <div class="col-md-6 mt-3" id="hsnDiv">
                                                     <label for="nitm_hsn" class="text-white">HSN Code</label>
                                                     <input type="number" name="nitm_hsn" class="form-control" placeholder="Enter a valid HSN code" id="nitm_hsn">
                                                     <span class="font-medium text-danger" id="item-hsn-error"></span>
+                                                </div>
+                                                <div class="col-md-6 mt-3" id="sacDiv" style="display: none;">
+                                                    <label for="sacField" style="color: white;">SAC Code</label>
+                                                    <input type="number" name="sac" class="form-control" style=" color: white;" placeholder="Enter a valid SAC code" id="sacField" oninput="validateSAC()">
+                                                    <div id="sacError" style="color: red;"></div>
                                                 </div>
                                             </div>
                                             <div class="row mt-3">
@@ -2248,11 +2256,12 @@
         var ven_state = $('#ven_psupply').val()
         var cust_state = $('#cust_psupply').val()
         var hsn = item.data("hsn");
+        var sac = item.data("sac");
+        var item_type = item.data("item_type");
         var stock = item.data("stock");
         var price = item.data("price");
         var intra = item.data("intra");
         var inter = item.data("inter");
-
         var tableBody = document.getElementById("items-table-body");
         var rows = tableBody.getElementsByTagName("tr");
         for (var i = 1; i <= rows.length; i++) {
@@ -2264,8 +2273,19 @@
                 }
             }
         }
-
-        $(`#hsn${no}`).val(hsn)
+        if( item_type ==='Goods')
+        {
+            $(`#hsn${no}`).show();
+            $(`#sac${no}`).hide();
+            $(`#hsn${no}`).val(hsn);
+        }
+        else
+        {
+            $(`#sac${no}`).show();
+            $(`#hsn${no}`).hide();
+            $(`#sac${no}`).val(sac);
+        }
+        // $(`#hsn${no}`).val(hsn)
         if($('#price_list').val() == ''){
             $(`#price${no}`).val(price)
         }else{
@@ -2339,6 +2359,8 @@
                                 {% for i in itm %}
                                     <option value="{{ i.id }}" 
                                     data-hsn="{{i.hsn}}"
+                                    data-sac="{{ i.sac }}"
+                                    data-item_type="{{ i.item_type }}"
                                     data-stock="{{i.temp_stock}}" 
                                     data-price="{{i.purchase_price}}"
                                     data-intra="{{i.intra_state_tax}}"
@@ -2352,7 +2374,8 @@
                     </td>
 
                     <td tyle="width:12%">
-                        <input type="text" name='hsn[]' id="hsn${roinc}" class="form-control border-secondary" readonly />
+                        <input type="text" name='hsn[]' id="hsn${roinc}" class="form-control border-secondary HSNCODE" readonly />
+                        <input type="text" name='sac[]' id="sac${roinc}" class="form-control border-secondary SACCODE" readonly style="display:none"/>
                     </td>
 
                     <td style="width:13%">
@@ -2438,11 +2461,13 @@
                     value = item.id
                     name = item.name
                     hsn = item.hsn
+                    sac = item.sac
+                    item_type = item.item_type
                     cstock = item.cstock
                     price = item.price
                     intra_tax = item.intra_tax
                     inter_tax = item.inter_tax
-                    $(`#product${row}`).append('<option value="' + value + '" data-hsn="' + hsn + '" data-stock="' + cstock + '" data-price="' + price + '" data-intra="' + intra_tax + '" data-inter="' + inter_tax + '">' + name + '</option>');
+                    $(`#product${row}`).append('<option value="' + value + '" data-hsn="' + hsn + '" data-sac="' + sac + '" data-item_type="' + item_type+ '" data-stock="' + cstock + '" data-price="' + price + '" data-intra="' + intra_tax + '" data-inter="' + inter_tax + '">' + name + '</option>');
                 });
             },
         });
@@ -3928,6 +3953,24 @@
             }else{
                 taxref = 'Non Taxable'
             }
+            
+            if($('#nitm_type').val()=== 'Goods' )
+            {
+                if(!validateHSN())
+                {
+                    alert('HSN must contain at least 6 digits')
+                    return
+                }
+            }
+            else 
+            {
+                if(!validateSAC())
+                {
+                    alert('SAC must contain at least 6 digits')
+                    return
+                }
+            }
+
             $.ajax({
                 url: "{% url 'Fin_New_Item' %}",
                 type : 'GET',
@@ -3937,6 +3980,7 @@
                     type : $('#nitm_type').val(),
                     unit : $('#nitm_unit').val(),
                     hsn : $('#nitm_hsn').val(),
+                    sac : $('#sacField').val(),
                     taxref : taxref,
                     intra_st : $('#nitm_intra_tax').val(),
                     inter_st : $('#nitm_inter_tax').val(),
@@ -3961,6 +4005,8 @@
                             value: response.id 
                         });
                         $option.attr('data-hsn', $('#nitm_hsn').val());
+                        $option.attr('data-sac', $('#sacField').val());
+                        $option.attr('data-item_type', $('#nitm_type').val());
                         $option.attr('data-stock', $('#nitm_stock').val());
                         $option.attr('data-price', $('#nitm_pur_price').val());
                         $option.attr('data-intra',$('#nitm_intra_tax').val());
@@ -3974,4 +4020,67 @@
         }
     });
 </script>
+
+
+<script>
+    function validateSAC() {
+        var sacField = document.getElementById("sacField");
+        var errorText = document.getElementById("sacError");
+        var sacValue = sacField.value;
+
+        if (sacValue.length < 6) {
+            errorText.innerText = "SAC must contain at least 6 digits";
+            sacField.setCustomValidity("SAC must contain at least 6 digits");
+            sacField.style.borderColor = "red";
+            return false;
+        } else {
+            errorText.innerText = "";
+            sacField.setCustomValidity(""); 
+            sacField.style.borderColor = ""; 
+            return true;
+        }
+    }
+    $(document).ready(function(){
+        $('#nitm_type').on('input',function(){
+            if($(this).val()=== 'Goods' )
+            {
+                $('#sacField').val('');
+                $('#nitm_hsn').prop('required',true);
+                $('#sacField').prop('required',false);
+                $('#hsnDiv').show();
+                $('#sacDiv').hide();
+                $('#sacError').text('');
+                $('#sacField').css({'border-color':'white'});
+            }
+            else
+            {
+                $('#nitm_hsn').val('')
+                $('#nitm_hsn').prop('required',false);
+                $('#sacField').prop('required',true);
+                $('#sacDiv').show();
+                $('#hsnDiv').hide();
+                $('#item-hsn-error').text('');
+                $('#nitm_hsn').css({'border-color':'white'});
+            }
+        })
+    })
+    function validateHSN() {
+        var nitm_hsn = document.getElementById("nitm_hsn");
+        var errorText = document.getElementById("hsnError");
+        var hsnValue = nitm_hsn.value;
+
+        if (hsnValue.length < 6) {
+            errorText.innerText = "HSN must contain at least 6 digits";
+            nitm_hsn.setCustomValidity("HSN must contain at least 6 digits");
+            nitm_hsn.style.borderColor = "red";
+            return false
+        } else {
+            errorText.innerText = "";
+            nitm_hsn.setCustomValidity(""); 
+            nitm_hsn.style.borderColor = ""; 
+            return true
+        }
+    }
+</script>
+
 {% endblock %}

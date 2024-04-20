@@ -12834,7 +12834,12 @@ def Fin_New_Item(request):
             name = request.GET.get('name')
             type = request.GET.get('type')
             unit = request.GET.get('unit')
-            hsn = request.GET.get('hsn')
+            if request.GET['hsn']:
+                hsn = request.GET['hsn']
+                sac = None
+            elif request.GET['sac']:
+                sac = request.GET['sac']
+                hsn = None
             tax = request.GET.get('taxref')
             gstTax = 0 if tax == 'non taxable' else request.GET.get('intra_st')
             igstTax = 0 if tax == 'non taxable' else request.GET.get('inter_st')
@@ -12857,6 +12862,7 @@ def Fin_New_Item(request):
                 item_type = type,
                 unit = unit,
                 hsn = hsn,
+                sac=sac,
                 tax_reference = tax,
                 intra_state_tax = gstTax,
                 inter_state_tax = igstTax,
@@ -15534,19 +15540,30 @@ def Fin_createRecurringInvoice(request):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("priceListPrice[]") if 'priceList' in request.POST else request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
             discount = request.POST.getlist("discount[]")
             total = request.POST.getlist("total[]")
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None' :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     itm = Fin_Items.objects.get(id = int(ele[0]))
-                    Fin_Recurring_Invoice_Items.objects.create(RecInvoice = inv, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                    itm.current_stock -= int(ele[3])
+                    Fin_Recurring_Invoice_Items.objects.create(RecInvoice = inv, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                    itm.current_stock -= int(ele[4])
                     itm.save()
             
             # Save transaction
@@ -15873,6 +15890,7 @@ def Fin_updateRecurringInvoice(request, id):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("priceListPrice[]") if 'priceList' in request.POST else request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
@@ -15895,39 +15913,47 @@ def Fin_updateRecurringInvoice(request, id):
             
             count = Fin_Recurring_Invoice_Items.objects.filter(RecInvoice = rec_inv).count()
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(invItem_ids) and invItem_ids and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total,invItem_ids)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(invItem_ids) and invItem_ids and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total,invItem_ids)
                 mapped = list(mapped)
                 for ele in mapped:
+                    if ele[2] == '' or ele[2] == 'None'  :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
                     if int(len(itemId))>int(count):
-                        if ele[8] == 0:
+                        if ele[9] == 0:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Recurring_Invoice_Items.objects.create(RecInvoice = rec_inv, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                            Fin_Recurring_Invoice_Items.objects.create(RecInvoice = rec_inv, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
                             itm.current_stock -= int(ele[3])
                             itm.save()
                         else:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            inItm = Fin_Recurring_Invoice_Items.objects.get(id = int(ele[8]))
+                            inItm = Fin_Recurring_Invoice_Items.objects.get(id = int(ele[9]))
                             crQty = int(inItm.quantity)
                             
-                            Fin_Recurring_Invoice_Items.objects.filter( id = int(ele[8])).update(RecInvoice = rec_inv, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                            Fin_Recurring_Invoice_Items.objects.filter( id = int(ele[9])).update(RecInvoice = rec_inv, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
 
-                            if crQty < int(ele[3]):
-                                itm.current_stock -=  abs(crQty - int(ele[3]))
-                            elif crQty > int(ele[3]):
-                                itm.current_stock += abs(crQty - int(ele[3]))
+                            if crQty < int(ele[4]):
+                                itm.current_stock -=  abs(crQty - int(ele[4]))
+                            elif crQty > int(ele[4]):
+                                itm.current_stock += abs(crQty - int(ele[4]))
                             itm.save()
                     else:
                         itm = Fin_Items.objects.get(id = int(ele[0]))
-                        inItm = Fin_Recurring_Invoice_Items.objects.get(id = int(ele[8]))
+                        inItm = Fin_Recurring_Invoice_Items.objects.get(id = int(ele[9]))
                         crQty = int(inItm.quantity)
 
-                        Fin_Recurring_Invoice_Items.objects.filter( id = int(ele[8])).update(RecInvoice = rec_inv, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                        Fin_Recurring_Invoice_Items.objects.filter( id = int(ele[9])).update(RecInvoice = rec_inv, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
 
-                        if crQty < int(ele[3]):
-                            itm.current_stock -=  abs(crQty - int(ele[3]))
-                        elif crQty > int(ele[3]):
-                            itm.current_stock += abs(crQty - int(ele[3]))
+                        if crQty < int(ele[4]):
+                            itm.current_stock -=  abs(crQty - int(ele[4]))
+                        elif crQty > int(ele[4]):
+                            itm.current_stock += abs(crQty - int(ele[4]))
                         itm.save()
             
             # Save transaction
@@ -17326,19 +17352,30 @@ def Fin_createPurchaseOrder(request):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['source_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
             discount = request.POST.getlist("discount[]")
             total = request.POST.getlist("total[]")
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None' :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     itm = Fin_Items.objects.get(id = int(ele[0]))
-                    Fin_Purchase_Order_Items.objects.create(PurchaseOrder = POrder, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                    # itm.current_stock -= int(ele[3])
+                    Fin_Purchase_Order_Items.objects.create(PurchaseOrder = POrder, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                    # itm.current_stock -= int(ele[4])
                     # itm.save()
             
             # Save transaction
@@ -17742,6 +17779,7 @@ def Fin_updatePurchaseOrder(request, id):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['source_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
@@ -17759,20 +17797,30 @@ def Fin_updatePurchaseOrder(request, id):
             
             count = Fin_Purchase_Order_Items.objects.filter(PurchaseOrder = pOrder).count()
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(POItem_ids) and POItem_ids and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total,POItem_ids)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(POItem_ids) and POItem_ids and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total,POItem_ids)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None'  :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     if int(len(itemId))>int(count):
-                        if ele[8] == 0:
+                        if ele[9] == 0:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Purchase_Order_Items.objects.create(PurchaseOrder = pOrder, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                            Fin_Purchase_Order_Items.objects.create(PurchaseOrder = pOrder, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
                         else:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Purchase_Order_Items.objects.filter( id = int(ele[8])).update(PurchaseOrder = pOrder, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                            Fin_Purchase_Order_Items.objects.filter( id = int(ele[9])).update(PurchaseOrder = pOrder, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
                     else:
                         itm = Fin_Items.objects.get(id = int(ele[0]))
-                        Fin_Purchase_Order_Items.objects.filter( id = int(ele[8])).update(PurchaseOrder = pOrder, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
+                        Fin_Purchase_Order_Items.objects.filter( id = int(ele[9])).update(PurchaseOrder = pOrder, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
             
             # Save transaction
                     
@@ -18898,19 +18946,28 @@ def createdeliverychallan(request):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
             discount = request.POST.getlist("discount[]")
             total = request.POST.getlist("total[]")
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
                 mapped = list(mapped)
                 for ele in mapped:
+                    if ele[2] == '' or ele[2] == 'None' :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
                     itm = Fin_Items.objects.get(id = int(ele[0]))
-                    created_instance = Fin_Delivery_Challan_Items.objects.create(delivery_challan = challan, items = itm, hsn = ele[2], quantity = int(ele[3]),  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                    itm.current_stock -= int(ele[3])
+                    created_instance = Fin_Delivery_Challan_Items.objects.create(delivery_challan = challan, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]),  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                    itm.current_stock -= int(ele[4])
                     created_instance.save()
                     itm.save()
             
@@ -19029,6 +19086,7 @@ def editchallan(request,id):
             itemName = request.POST.getlist("item_name[]")
             print(itemName)
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             plc=request.POST['place_of_supply']
@@ -19069,27 +19127,37 @@ def editchallan(request,id):
             
             count = Fin_Delivery_Challan_Items.objects.filter(delivery_challan = est).count()
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(EstItem_ids) and EstItem_ids and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total,EstItem_ids)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(EstItem_ids) and EstItem_ids and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total,EstItem_ids)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None'  :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     if int(len(itemId))>int(count):
-                        if ele[8] == 0:
+                        if ele[9] == 0:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Delivery_Challan_Items.objects.create(delivery_challan = est, items = itm, hsn = ele[2], quantity = int(ele[3]), price = ele[4],  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                            itm.current_stock -= int(ele[3])
+                            Fin_Delivery_Challan_Items.objects.create(delivery_challan = est, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = ele[5],  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                            itm.current_stock -= int(ele[4])
                             # created_instance.save()
                             itm.save()
                         else:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Delivery_Challan_Items.objects.filter( id = int(ele[8])).update(delivery_challan = est, items = itm, hsn = ele[2], quantity = int(ele[3]), price = ele[4],  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                            itm.current_stock -= int(ele[3])
+                            Fin_Delivery_Challan_Items.objects.filter( id = int(ele[9])).update(delivery_challan = est, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = ele[5],  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                            itm.current_stock -= int(ele[4])
                             # created_instance.save()
                             itm.save()
                     else:
                         itm = Fin_Items.objects.get(id = int(ele[0]))
-                        Fin_Delivery_Challan_Items.objects.filter( id = int(ele[8])).update(delivery_challan = est, items = itm, hsn = ele[2], quantity = int(ele[3]), price = ele[4],  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                        itm.current_stock -= int(ele[3])
+                        Fin_Delivery_Challan_Items.objects.filter( id = int(ele[9])).update(delivery_challan = est, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = ele[5],  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                        itm.current_stock -= int(ele[4])
                             # created_instance.save()
                         itm.save()
             # Save transaction
@@ -19122,9 +19190,16 @@ def Fin_editchallanto(request,id):
         estItms = Fin_Delivery_Challan_Items.objects.filter(delivery_challan = est)
         cust = Fin_Customers.objects.filter(Company = cmp, status = 'Active')
         itms = Fin_Items.objects.filter(Company = cmp, status = 'Active')
+        trms = Fin_Company_Payment_Terms.objects.filter(Company = cmp)
+        bnk = Fin_Banking.objects.filter(company = cmp)
+        lst = Fin_Price_List.objects.filter(Company = cmp, status = 'Active')
+        units = Fin_Units.objects.filter(Company = cmp)
+        acc = Fin_Chart_Of_Account.objects.filter(Q(account_type='Expense') | Q(account_type='Other Expense') | Q(account_type='Cost Of Goods Sold'), Company=cmp).order_by('account_name')
+
        
         context = {
-            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data,'estimate':est, 'estItems':estItms, 'customers':cust, 'items':itms
+            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data,'estimate':est, 'estItems':estItms, 'customers':cust, 'items':itms,'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data, 'customers':cust, 'items':itms, 'pTerms':trms,'list':lst,
+            'banks':bnk,'units':units, 'accounts':acc
            
         }
         return render(request,'company/Fin_Delivery_Challan_Edit.html',context)
@@ -20494,6 +20569,8 @@ def Fin_getInvItemDetails2(request):
             'status':True,
             'id': item.id,
             'hsn':item.hsn,
+            'sac':item.sac,
+            'item_type':item.item_type,
             'sales_rate':item.selling_price,
             'purchase_rate':item.purchase_price,
             'avl':item.current_stock,
@@ -22920,19 +22997,30 @@ def Fin_newdebitnote(request):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
             discount = request.POST.getlist("discount[]")
             total = request.POST.getlist("total[]")
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None' :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     itm = Fin_Items.objects.get(id = int(ele[0]))
-                    created_instance = Fin_Debit_Note_Items.objects.create(debit_note = debit, items = itm, hsn = ele[2], quantity = int(ele[3]),  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                    itm.current_stock -= int(ele[3])
+                    created_instance = Fin_Debit_Note_Items.objects.create(debit_note = debit, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]),  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                    itm.current_stock -= int(ele[4])
                     created_instance.save()
                     itm.save()
             
@@ -23141,9 +23229,17 @@ def Fin_editdebitnote(request,id):
         cust = Fin_Vendors.objects.filter(Company = cmp, status = 'Active')
         itms = Fin_Items.objects.filter(Company = cmp, status = 'Active')
         banks = Fin_Banking.objects.filter(company=com.id)
+        trms = Fin_Company_Payment_Terms.objects.filter(Company = cmp)
+        bnk = Fin_Banking.objects.filter(company = cmp)
+        lst = Fin_Price_List.objects.filter(Company = cmp, status = 'Active')
+        units = Fin_Units.objects.filter(Company = cmp)
+        acc = Fin_Chart_Of_Account.objects.filter(Q(account_type='Expense') | Q(account_type='Other Expense') | Q(account_type='Cost Of Goods Sold'), Company=cmp).order_by('account_name')
+
        
         context = {
-            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data,'estimate':est, 'estItems':estItms, 'customers':cust, 'items':itms,'banks':banks
+            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data,'estimate':est, 'estItems':estItms, 'customers':cust, 'items':itms,'banks':banks,
+            'customers':cust, 'items':itms, 'pTerms':trms,'list':lst,
+            'banks':bnk,'units':units, 'accounts':acc
            
         }
         return render(request,'company/Fin_Debit_Note_Edit.html',context)
@@ -23222,6 +23318,7 @@ def editdebit(request,id):
             itemName = request.POST.getlist("item_name[]")
             print(itemName)
             hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("price[]")
             plc=request.POST['place_of_supply']
@@ -23262,27 +23359,37 @@ def editdebit(request,id):
             
             count = Fin_Debit_Note_Items.objects.filter(debit_note = est).count()
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(EstItem_ids) and EstItem_ids and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total,EstItem_ids)
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(EstItem_ids) and EstItem_ids and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total,EstItem_ids)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None'  :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     if int(len(itemId))>int(count):
-                        if ele[8] == 0:
+                        if ele[9] == 0:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Debit_Note_Items.objects.create(debit_note = est, items = itm, hsn = ele[2], quantity = int(ele[3]), price = ele[4],  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                            itm.current_stock -= int(ele[3])
+                            Fin_Debit_Note_Items.objects.create(debit_note = est, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = ele[5],  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                            itm.current_stock -= int(ele[4])
                             # created_instance.save()
                             itm.save()
                         else:
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            Fin_Debit_Note_Items.objects.filter( id = int(ele[8])).update(debit_note = est, items = itm, hsn = ele[2], quantity = int(ele[3]), price = ele[4],  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                            itm.current_stock -= int(ele[3])
+                            Fin_Debit_Note_Items.objects.filter( id = int(ele[9])).update(debit_note = est, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = ele[5],  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                            itm.current_stock -= int(ele[4])
                             # created_instance.save()
                             itm.save()
                     else:
                         itm = Fin_Items.objects.get(id = int(ele[0]))
-                        Fin_Debit_Note_Items.objects.filter( id = int(ele[8])).update(debit_note = est, items = itm, hsn = ele[2], quantity = int(ele[3]), price = ele[4],  tax_rate = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                        itm.current_stock -= int(ele[3])
+                        Fin_Debit_Note_Items.objects.filter( id = int(ele[9])).update(debit_note = est, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = ele[5],  tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                        itm.current_stock -= int(ele[4])
                             # created_instance.save()
                         itm.save()
             # Save transaction
@@ -27826,7 +27933,7 @@ def Fin_Get_All_Items_Add(request):
     else:
         com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
     itm = Fin_Items.objects.filter(Company = com, status = 'Active')
-    itm_data = [{'id': obj.id, 'name': obj.name, 'hsn': obj.hsn, 'cstock': obj.current_stock, 'price': obj.purchase_price, 'intra_tax': obj.intra_state_tax, 'inter_tax': obj.inter_state_tax} for obj in itm]
+    itm_data = [{'id': obj.id, 'name': obj.name, 'hsn': obj.hsn,'sac': obj.sac,'item_type': obj.item_type, 'cstock': obj.current_stock, 'price': obj.purchase_price, 'intra_tax': obj.intra_state_tax, 'inter_tax': obj.inter_state_tax} for obj in itm]
     return JsonResponse(itm_data, safe=False)
     
     
@@ -27848,9 +27955,9 @@ def Fin_Get_All_Items_Edit(request):
     for i in itm:
         if i.id in pitm_dict.keys():
             temp_stock = i.current_stock - pitm_dict[i.id]
-            itm_data.append({'id': i.id, 'name': i.name, 'hsn': i.hsn, 'cstock': temp_stock, 'price': i.purchase_price, 'intra_tax': i.intra_state_tax, 'inter_tax': i.inter_state_tax})
+            itm_data.append({'id': i.id, 'name': i.name, 'hsn': i.hsn,'sac': i.sac,'item_type': i.item_type, 'cstock': temp_stock, 'price': i.purchase_price, 'intra_tax': i.intra_state_tax, 'inter_tax': i.inter_state_tax})
         else:
-            itm_data.append({'id': i.id, 'name': i.name, 'hsn': i.hsn, 'cstock': i.current_stock, 'price': i.purchase_price, 'intra_tax': i.intra_state_tax, 'inter_tax': i.inter_state_tax})
+            itm_data.append({'id': i.id, 'name': i.name, 'hsn': i.hsn,'sac': i.sac,'item_type': i.item_type, 'cstock': i.current_stock, 'price': i.purchase_price, 'intra_tax': i.intra_state_tax, 'inter_tax': i.inter_state_tax})
     return JsonResponse(itm_data, safe=False)
     
     
@@ -29358,43 +29465,38 @@ def Fin_RET_INV_update(request, id):
 
             ids_to_delete = [obj_id for obj_id in object_ids if obj_id not in riitem_ids]
             for itmId in ids_to_delete:
-                # if Fin_Retainer_Invoice.objects.filter(id = itmId).exists():
-                riItem = Fin_Retainer_Invoice.objects.get(id = itmId)
+                riItem = Fin_Retainer_Invoice_Items.objects.get(id = itmId)
                 item = Fin_Items.objects.get(id = riItem.Item.id)
-                item.current_stock += riItem.quantity
+                item.current_stock += riItem.Quantity
                 item.save()
 
-            Fin_Retainer_Invoice.objects.filter(id__in=ids_to_delete).delete()
+            Fin_Retainer_Invoice_Items.objects.filter(id__in=ids_to_delete).delete()
             
             count = Fin_Retainer_Invoice_Items.objects.filter(Ret_Inv= retinv).count()
+           
             if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(description)==len(discount)==len(total)==len(riitem_ids) and riitem_ids and itemId and itemName and qty and price and description and discount and total:
                 mapped = zip(itemId,itemName,hsn,sac,qty,price,description,discount,total,riitem_ids)
                 mapped = list(mapped)
                 for ele in mapped:
                    
-                    if ele[2] == '' or ele[2] == 'None'  :
-                        hsn = None
-                    else:
-                        hsn = ele[2]
-                    if ele[3] == '' or ele[3] == 'None':
-                        sac = None
-                    else:
-                        sac = ele[3]
-
-                    print(f'\t\t{ele[9]}')
-                    print(f'{len(itemId)}\t{count}')
                     if int(len(itemId))>int(count):
-                        print('entered 01')
+
+                        if ele[2] == '' or ele[2] == 'None'  :
+                            hsn = None
+                        else:
+                            hsn = ele[2]
+                        if ele[3] == '' or ele[3] == 'None':
+                            sac = None
+                        else:
+                            sac = ele[3]
+
                         if ele[9] == 0:
-                            print('entered 01 01')
                             itm = Fin_Items.objects.get(id = int(ele[0]))
                             Fin_Retainer_Invoice_Items.objects.create(Ret_Inv= retinv, Item = itm, HSN = hsn,SAC=sac, Quantity = int(ele[4]), Price = float(ele[5]), Discription = ele[6], discount = float(ele[7]), Total = float(ele[8]))
-                            itm.current_stock -= int(ele[4])
+                            itm.current_stock -= int(ele[3])
                             itm.save()
                         else:
-                            print('entered 01 02')
                             itm = Fin_Items.objects.get(id = int(ele[0]))
-                            # if Fin_Retainer_Invoice_Items.objects.filter(id = int(ele[9])).exists():
                             retinvItm = Fin_Retainer_Invoice_Items.objects.get(id = int(ele[9]))
                             crQty = int(retinvItm.Quantity)
                             
@@ -29406,7 +29508,6 @@ def Fin_RET_INV_update(request, id):
                                 itm.current_stock += abs(crQty - int(ele[4]))
                             itm.save()
                     else:
-                        print('entered 02')
                         itm = Fin_Items.objects.get(id = int(ele[0]))
                         retinvItm= Fin_Retainer_Invoice_Items.objects.get(id = int(ele[9]))
                         crQty = int(retinvItm.Quantity)
@@ -30334,3 +30435,797 @@ def Fin_shareUpiStatementToEmail(request):
             return redirect(Fin_upiStatement)
 
 # End
+
+
+
+
+# < ------------- Shemeem -------- > CREDIT NOTES < ------------------------------- >
+def Fin_creditNotes(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            cmp = com
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            cmp = com.company_id
+        
+        allmodules = Fin_Modules_List.objects.get(company_id = cmp,status = 'New')
+        cred = Fin_CreditNote.objects.filter(Company = cmp)
+        context = {
+            'allmodules':allmodules,'com':com, 'cmp':cmp,'data':data,'creditNotes':cred
+        }
+        return render(request,'company/Fin_Credit_Notes.html', context)
+    else:
+       return redirect('/')
+
+def Fin_addCreditNote(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            cmp = com
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            cmp = com.company_id
+        
+        allmodules = Fin_Modules_List.objects.get(company_id = cmp,status = 'New')
+
+        cust = Fin_Customers.objects.filter(Company = cmp, status = 'Active')
+        itms = Fin_Items.objects.filter(Company = cmp, status = 'Active')
+        trms = Fin_Company_Payment_Terms.objects.filter(Company = cmp)
+        bnk = Fin_Banking.objects.filter(company = cmp)
+        lst = Fin_Price_List.objects.filter(Company = cmp, type__iexact='sales', status = 'Active')
+        units = Fin_Units.objects.filter(Company = cmp)
+        acc = Fin_Chart_Of_Account.objects.filter(Q(account_type='Expense') | Q(account_type='Other Expense') | Q(account_type='Cost Of Goods Sold'), Company=cmp).order_by('account_name')
+
+        # Fetching last creditNote and assigning upcoming ref no as current + 1
+        # Also check for if any bill is deleted and ref no is continuos w r t the deleted creditNote
+        latest_cred = Fin_CreditNote.objects.filter(Company = cmp).order_by('-id').first()
+
+        new_number = int(latest_cred.reference_number) + 1 if latest_cred else 1
+
+        if Fin_CreditNote_Reference.objects.filter(Company = cmp).exists():
+            deleted = Fin_CreditNote_Reference.objects.get(Company = cmp)
+            
+            if deleted:
+                while int(deleted.reference_number) >= new_number:
+                    new_number+=1
+
+        # Finding next invoice number w r t last invoic number if exists.
+        nxtCN = ""
+        if latest_cred:
+            inv_no = str(latest_cred.creditnote_number)
+            numbers = []
+            stri = []
+            for word in inv_no:
+                if word.isdigit():
+                    numbers.append(word)
+                else:
+                    stri.append(word)
+
+            num = ''.join(numbers)
+            st = ''.join(stri)
+
+            inv_num = int(num) + 1
+            if num[0] == 0:
+                nxtCN = st + num.zfill(len(num))
+            else:
+                nxtCN = st + str(inv_num).zfill(len(num))
+        else:
+            nxtCN = 'CN001'
+
+        context = {
+            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data, 'customers':cust, 'items':itms, 'pTerms':trms,'priceListItems':lst,
+            'ref_no':new_number,'banks':bnk,'credNo':nxtCN,'units':units, 'accounts':acc
+        }
+        return render(request,'company/Fin_Credit_NotesAdd.html',context)
+    else:
+        return redirect('/')
+
+def Fin_getInvoiceNumbers(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        cust = request.GET['custId']
+        invType = request.GET['invType']
+
+        invoices = {}
+        customer = Fin_Customers.objects.get(id = cust)
+        if not customer:
+            return JsonResponse({'message':'Customer Not Found, Try again..'})
+
+        if invType == 'Invoice':
+            invs = Fin_Invoice.objects.filter(Company = com, Customer = customer)
+
+            for option in invs:
+                if not Fin_CreditNote.objects.filter(Company = com, invoice_number__iexact = option.invoice_no).exists():
+                    invoices[option.id] = [option.id, option.invoice_no]
+                else:
+                    continue
+        
+        if invType == 'Recurring Invoice':
+            invs = Fin_Recurring_Invoice.objects.filter(Company = com, Customer = customer)
+
+            for option in invs:
+                if not Fin_CreditNote.objects.filter(Company = com, invoice_number__iexact = option.rec_invoice_no).exists():
+                    invoices[option.id] = [option.id, option.rec_invoice_no]
+                else:
+                    continue
+
+        return JsonResponse(invoices)
+    else:
+        return redirect('/')
+
+def Fin_getInvoiceNumbersEdit(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        cust = request.GET['custId']
+        invType = request.GET['invType']
+        invNo = request.GET['invNum']
+
+        invoices = {}
+        customer = Fin_Customers.objects.get(id = cust)
+        if not customer:
+            return JsonResponse({'message':'Customer Not Found, Try again..'})
+
+        if invType == 'Invoice':
+            invs = Fin_Invoice.objects.filter(Company = com, Customer = customer)
+
+            for option in invs:
+                if option.invoice_no == invNo:
+                    invoices[option.id] = [option.id, option.invoice_no]
+
+                if not Fin_CreditNote.objects.filter(Company = com, invoice_number__iexact = option.invoice_no).exists():
+                    invoices[option.id] = [option.id, option.invoice_no]
+                else:
+                    continue
+        
+        if invType == 'Recurring Invoice':
+            invs = Fin_Recurring_Invoice.objects.filter(Company = com, Customer = customer)
+
+            for option in invs:
+                if option.rec_invoice_no == invNo:
+                    invoices[option.id] = [option.id, option.rec_invoice_no]
+                if not Fin_CreditNote.objects.filter(Company = com, invoice_number__iexact = option.rec_invoice_no).exists():
+                    invoices[option.id] = [option.id, option.rec_invoice_no]
+                else:
+                    continue
+
+        return JsonResponse(invoices)
+    else:
+        return redirect('/')
+
+def Fin_getInvoiceDet(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        invoiceId = request.GET['id']
+        invType = request.GET['type']
+
+        items = {}
+        if invType == 'Invoice':
+            inv = Fin_Invoice.objects.get(id = invoiceId)
+            itms = Fin_Invoice_Items.objects.filter(Invoice = inv)
+
+        if invType == 'Recurring Invoice':
+            inv = Fin_Recurring_Invoice.objects.get(id = invoiceId)
+            itms = Fin_Recurring_Invoice_Items.objects.filter(RecInvoice = inv)
+
+        if not itms:
+            return JsonResponse({'message':'Items Not Found for the selected number,\nAdd Items or Try again..'})
+
+        for item in itms:
+            items[item.id] = [item.id, item.Item.name, item.Item.id, item.hsn, item.quantity, item.Item.current_stock, item.price, item.Item.selling_price, item.tax, item.discount, item.total,item.sac]
+        # if invType == 'Invoice':
+        #     for item in itms:
+        #         items[item.id] = [item.id, item.Item.name, item.hsn, item.quantity, item.Item.current_stock, item.price, item.tax, item.discount, item.total]
+        
+        # if invType == 'Recurring Invoice':
+        #     for item in itms:
+        #         items[item.id] = [item.id, item.Item.name, item.hsn, item.quantity, item.Item.current_stock, item.price, item.tax, item.discount, item.total]
+
+        return JsonResponse(items)
+    else:
+        return redirect('/')
+
+def Fin_createCreditNote(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        if request.method == 'POST':
+            cnNum = request.POST['credit_note_no']
+
+            PatternStr = []
+            for word in cnNum:
+                if word.isdigit():
+                    pass
+                else:
+                    PatternStr.append(word)
+            
+            pattern = ''
+            for j in PatternStr:
+                pattern += j
+
+            pattern_exists = checkCreditNoteNumberPattern(pattern)
+
+            if pattern !="" and pattern_exists:
+                res = f'<script>alert("Credit Note No. Pattern already Exists.! Try another!");window.history.back();</script>'
+                return HttpResponse(res)
+
+            if Fin_CreditNote.objects.filter(Company = com, creditnote_number__iexact = cnNum).exists():
+                res = f'<script>alert("Credit Not Number `{cnNum}` already exists, try another!");window.history.back();</script>'
+                return HttpResponse(res)
+
+            cNote = Fin_CreditNote(
+                Company = com,
+                LoginDetails = com.Login_Id,
+                Customer = None if request.POST['customerId'] == "" else Fin_Customers.objects.get(id = request.POST['customerId']),
+                customer_email = request.POST['customerEmail'],
+                billing_address = request.POST['bill_address'],
+                gst_type = request.POST['gst_type'],
+                gstin = request.POST['gstin'],
+                place_of_supply = request.POST['place_of_supply'],
+                reference_number = request.POST['reference_number'],
+                creditnote_number = cnNum,
+                invoice_type = None if request.POST['invoice_type'] == "" else request.POST['invoice_type'],
+                invoice_number = None if request.POST['invoice_number'] == "" else Fin_Invoice.objects.get(id = request.POST['invoice_number']).invoice_no if request.POST['invoice_type'] == 'Invoice' else Fin_Recurring_Invoice.objects.get(id = request.POST['invoice_number']).rec_invoice_no,
+                creditnote_date = request.POST['credit_note_date'],
+                price_list_applied = True if 'priceList' in request.POST else False,
+                price_list = None if request.POST['price_list_id'] == "" else Fin_Price_List.objects.get(id = request.POST['price_list_id']),
+                payment_type = None if request.POST['payment_method'] == "" else request.POST['payment_method'],
+                cheque_number = None if request.POST['cheque_id'] == "" else request.POST['cheque_id'],
+                upi_id = None if request.POST['upi_id'] == "" else request.POST['upi_id'],
+                bank_account = None if request.POST['bnk_id'] == "" else request.POST['bnk_id'],
+                subtotal = 0.0 if request.POST['subtotal'] == "" else float(request.POST['subtotal']),
+                igst = 0.0 if request.POST['igst'] == "" else float(request.POST['igst']),
+                cgst = 0.0 if request.POST['cgst'] == "" else float(request.POST['cgst']),
+                sgst = 0.0 if request.POST['sgst'] == "" else float(request.POST['sgst']),
+                tax_amount = 0.0 if request.POST['taxamount'] == "" else float(request.POST['taxamount']),
+                adjustment = 0.0 if request.POST['adj'] == "" else float(request.POST['adj']),
+                shipping_charge = 0.0 if request.POST['ship'] == "" else float(request.POST['ship']),
+                grandtotal = 0.0 if request.POST['grandtotal'] == "" else float(request.POST['grandtotal']),
+                paid = 0.0 if request.POST['advance'] == "" else float(request.POST['advance']),
+                balance = request.POST['grandtotal'] if request.POST['balance'] == "" else float(request.POST['balance']),
+                note = request.POST['note']
+            )
+
+            cNote.save()
+
+            if len(request.FILES) != 0:
+                cNote.file=request.FILES.get('file')
+            cNote.save()
+
+            if 'Draft' in request.POST:
+                cNote.status = "Draft"
+            elif "Save" in request.POST:
+                cNote.status = "Saved" 
+            cNote.save()
+
+            # Save invoice items.
+
+            itemId = request.POST.getlist("item_id[]")
+            itemName = request.POST.getlist("item_name[]")
+            hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
+            qty = request.POST.getlist("qty[]")
+            price = request.POST.getlist("priceListPrice[]") if 'priceList' in request.POST else request.POST.getlist("price[]")
+            tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
+            discount = request.POST.getlist("discount[]")
+            total = request.POST.getlist("total[]")
+
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
+                mapped = list(mapped)
+                for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None' :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
+                    itm = Fin_Items.objects.get(id = int(ele[0]))
+                    Fin_CreditNote_Items.objects.create(creditnote = cNote, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                    itm.current_stock -= int(ele[4])
+                    itm.save()
+            
+            # Save transaction
+                    
+            Fin_CreditNote_History.objects.create(
+                Company = com,
+                LoginDetails = data,
+                creditnote = cNote,
+                action = 'Created'
+            )
+
+            return redirect(Fin_creditNotes)
+    else:
+        return redirect('/')
+
+def checkCreditNoteNumber(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+        
+        credNoteNo = request.GET['credNoteNum']
+
+        # Finding next rec_invoice number w r t last rec_invoice number if exists.
+        nxtCNnum = ""
+        lastCN = Fin_CreditNote.objects.filter(Company = com).last()
+        if lastCN:
+            inv_no = str(lastCN.creditnote_number)
+            numbers = []
+            stri = []
+            for word in inv_no:
+                if word.isdigit():
+                    numbers.append(word)
+                else:
+                    stri.append(word)
+
+            num = ''.join(numbers)
+            st = ''.join(stri)
+
+            inv_num = int(num) + 1
+            if num[0] == 0:
+                nxtCNnum = st + num.zfill(len(num)) 
+            else:
+                nxtCNnum = st + str(inv_num).zfill(len(num))
+        # else:
+        #     nxtInv = 'RI01'
+
+        PatternStr = []
+        for word in credNoteNo:
+            if word.isdigit():
+                pass
+            else:
+                PatternStr.append(word)
+        
+        pattern = ''
+        for j in PatternStr:
+            pattern += j
+
+        pattern_exists = checkCreditNoteNumberPattern(pattern)
+
+        if pattern !="" and pattern_exists:
+            return JsonResponse({'status':False, 'message':'Credit Note No. Pattern already Exists.!'})
+        elif Fin_CreditNote.objects.filter(Company = com, creditnote_number__iexact = credNoteNo).exists():
+            return JsonResponse({'status':False, 'message':'Credit Note No. already Exists.!'})
+        elif nxtCNnum != "" and credNoteNo != nxtCNnum:
+            return JsonResponse({'status':False, 'message':'Credit Note No. is not continuous.!'})
+        else:
+            return JsonResponse({'status':True, 'message':'Number is okay.!'})
+    else:
+       return redirect('/')
+
+def checkCreditNoteNumberPattern(pattern):
+    models = [Fin_Invoice, Fin_Sales_Order, Fin_Estimate, Fin_Purchase_Bill, Fin_Manual_Journal, Fin_Recurring_Invoice, Fin_Purchase_Order]
+
+    for model in models:
+        field_name = model.getNumFieldName(model)
+        if model.objects.filter(**{f"{field_name}__icontains": pattern}).exists():
+            return True
+    return False
+
+def Fin_viewCreditNote(request, id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            cmp = com
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            cmp = com.company_id
+        
+        allmodules = Fin_Modules_List.objects.get(company_id = cmp,status = 'New')
+        crd = Fin_CreditNote.objects.get(id = id)
+        cmt = Fin_CreditNote_Comments.objects.filter(creditnote = crd)
+        hist = Fin_CreditNote_History.objects.filter(creditnote = crd).last()
+        itms = Fin_CreditNote_Items.objects.filter(creditnote = crd)
+        try:
+            created = Fin_CreditNote_History.objects.get(creditnote = crd, action = 'Created')
+        except:
+            created = None
+        
+        return render(request,'company/Fin_Credit_Note_Overview.html',{'allmodules':allmodules,'com':com,'cmp':cmp, 'data':data, 'credit':crd,'creditItems':itms, 'history':hist, 'comments':cmt, 'created':created})
+    else:
+       return redirect('/')
+
+def Fin_convertCreditNote(request,id):
+    if 's_id' in request.session:
+        crd = Fin_CreditNote.objects.get(id = id)
+        crd.status = 'Saved'
+        crd.save()
+        return redirect(Fin_viewCreditNote, id)
+
+def Fin_addCreditNoteComment(request, id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        crd = Fin_CreditNote.objects.get(id = id)
+        if request.method == "POST":
+            cmt = request.POST['comment'].strip()
+
+            Fin_CreditNote_Comments.objects.create(Company = com, creditnote = crd, comments = cmt)
+            return redirect(Fin_viewCreditNote, id)
+        return redirect(Fin_viewCreditNote, id)
+    return redirect('/')
+
+def Fin_deleteCreditNoteComment(request,id):
+    if 's_id' in request.session:
+        cmt = Fin_CreditNote_Comments.objects.get(id = id)
+        crdId = cmt.creditnote.id
+        cmt.delete()
+        return redirect(Fin_viewCreditNote, crdId)
+    
+def Fin_creditNoteHistory(request,id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        crd = Fin_CreditNote.objects.get(id = id)
+        his = Fin_CreditNote_History.objects.filter(creditnote = crd)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            allmodules = Fin_Modules_List.objects.get(Login_Id = s_id,status = 'New')
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            allmodules = Fin_Modules_List.objects.get(company_id = com.company_id,status = 'New')
+        
+        return render(request,'company/Fin_Credit_Note_History.html',{'allmodules':allmodules,'com':com,'data':data,'history':his, 'credit':crd})
+    else:
+       return redirect('/')
+
+def Fin_attachCreditNoteFile(request, id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        crd = Fin_CreditNote.objects.get(id = id)
+
+        if request.method == 'POST' and len(request.FILES) != 0:
+            crd.document = request.FILES.get('file')
+            crd.save()
+
+        return redirect(Fin_viewCreditNote, id)
+    else:
+        return redirect('/')
+
+def Fin_editCreditNote(request, id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            cmp = com
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            cmp = com.company_id
+        
+        crd = Fin_CreditNote.objects.get(id = id)
+        crdItms = Fin_CreditNote_Items.objects.filter(creditnote = crd)
+
+        allmodules = Fin_Modules_List.objects.get(company_id = cmp,status = 'New')
+
+        cust = Fin_Customers.objects.filter(Company = cmp, status = 'Active')
+        itms = Fin_Items.objects.filter(Company = cmp, status = 'Active')
+        trms = Fin_Company_Payment_Terms.objects.filter(Company = cmp)
+        bnk = Fin_Banking.objects.filter(company = cmp)
+        lst = Fin_Price_List.objects.filter(Company = cmp, type__iexact='sales', status = 'Active')
+        units = Fin_Units.objects.filter(Company = cmp)
+        acc = Fin_Chart_Of_Account.objects.filter(Q(account_type='Expense') | Q(account_type='Other Expense') | Q(account_type='Cost Of Goods Sold'), Company=cmp).order_by('account_name')
+
+
+        context = {
+            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data, 'customers':cust, 'items':itms, 'pTerms':trms,'priceListItems':lst,
+            'banks':bnk,'units':units, 'accounts':acc, 'credit': crd, 'creditItems':crdItms
+        }
+        return render(request,'company/Fin_Credit_NotesEdit.html',context)
+    else:
+        return redirect('/')
+
+def Fin_updateCreditNote(request, id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        crd = Fin_CreditNote.objects.get(id = id)
+
+        if request.method == 'POST':
+            cnNum = request.POST['credit_note_no']
+
+            PatternStr = []
+            for word in cnNum:
+                if word.isdigit():
+                    pass
+                else:
+                    PatternStr.append(word)
+            
+            pattern = ''
+            for j in PatternStr:
+                pattern += j
+
+            pattern_exists = checkCreditNoteNumberPattern(pattern)
+
+            if pattern !="" and pattern_exists:
+                res = f'<script>alert("Credit Note No. Pattern already Exists.! Try another!");window.history.back();</script>'
+                return HttpResponse(res)
+
+            if crd.creditnote_number != cnNum and Fin_CreditNote.objects.filter(Company = com, creditnote_number__iexact = cnNum).exists():
+                res = f'<script>alert("Credit Not Number `{cnNum}` already exists, try another!");window.history.back();</script>'
+                return HttpResponse(res)
+
+            
+            crd.Customer = None if request.POST['customerId'] == "" else Fin_Customers.objects.get(id = request.POST['customerId'])
+            crd.customer_email = request.POST['customerEmail']
+            crd.billing_address = request.POST['bill_address']
+            crd.gst_type = request.POST['gst_type']
+            crd.gstin = request.POST['gstin']
+            crd.place_of_supply = request.POST['place_of_supply']
+            crd.reference_number = request.POST['reference_number']
+            crd.creditnote_number = cnNum
+            crd.invoice_type = None if request.POST['invoice_type'] == "" else request.POST['invoice_type']
+            crd.invoice_number = None if request.POST['invoice_number'] == "" else Fin_Invoice.objects.get(id = request.POST['invoice_number']).invoice_no if request.POST['invoice_type'] == 'Invoice' else Fin_Recurring_Invoice.objects.get(id = request.POST['invoice_number']).rec_invoice_no
+            crd.creditnote_date = request.POST['credit_note_date']
+            crd.price_list_applied = True if 'priceList' in request.POST else False
+            crd.price_list = None if request.POST['price_list_id'] == "" else Fin_Price_List.objects.get(id = request.POST['price_list_id'])
+            crd.payment_type = None if request.POST['payment_method'] == "" else request.POST['payment_method']
+            crd.cheque_number = None if request.POST['cheque_id'] == "" else request.POST['cheque_id']
+            crd.upi_id = None if request.POST['upi_id'] == "" else request.POST['upi_id']
+            crd.bank_account = None if request.POST['bnk_id'] == "" else request.POST['bnk_id']
+            crd.subtotal = 0.0 if request.POST['subtotal'] == "" else float(request.POST['subtotal'])
+            crd.igst = 0.0 if request.POST['igst'] == "" else float(request.POST['igst'])
+            crd.cgst = 0.0 if request.POST['cgst'] == "" else float(request.POST['cgst'])
+            crd.sgst = 0.0 if request.POST['sgst'] == "" else float(request.POST['sgst'])
+            crd.tax_amount = 0.0 if request.POST['taxamount'] == "" else float(request.POST['taxamount'])
+            crd.adjustment = 0.0 if request.POST['adj'] == "" else float(request.POST['adj'])
+            crd.shipping_charge = 0.0 if request.POST['ship'] == "" else float(request.POST['ship'])
+            crd.grandtotal = 0.0 if request.POST['grandtotal'] == "" else float(request.POST['grandtotal'])
+            crd.paid = 0.0 if request.POST['advance'] == "" else float(request.POST['advance'])
+            crd.balance = request.POST['grandtotal'] if request.POST['balance'] == "" else float(request.POST['balance'])
+            crd.note = request.POST['note']
+
+            crd.save()
+
+            if len(request.FILES) != 0:
+                crd.file=request.FILES.get('file')
+            crd.save()
+
+            # Save invoice items.
+
+            itemId = request.POST.getlist("item_id[]")
+            itemName = request.POST.getlist("item_name[]")
+            hsn  = request.POST.getlist("hsn[]")
+            sac  = request.POST.getlist("sac[]")
+            qty = request.POST.getlist("qty[]")
+            price = request.POST.getlist("priceListPrice[]") if 'priceList' in request.POST else request.POST.getlist("price[]")
+            tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
+            discount = request.POST.getlist("discount[]")
+            total = request.POST.getlist("total[]")
+            crd_item_ids = request.POST.getlist("id[]")
+            crdItem_ids = [int(id) for id in crd_item_ids]
+
+            crd_items = Fin_CreditNote_Items.objects.filter(creditnote = crd)
+            object_ids = [obj.id for obj in crd_items]
+
+            ids_to_delete = [obj_id for obj_id in object_ids if obj_id not in crdItem_ids]
+            for itmId in ids_to_delete:
+                crdItem = Fin_CreditNote_Items.objects.get(id = itmId)
+                item = Fin_Items.objects.get(id = crdItem.items.id)
+                item.current_stock += crdItem.quantity
+                item.save()
+
+            Fin_CreditNote_Items.objects.filter(id__in=ids_to_delete).delete()
+
+            if len(itemId)==len(itemName)==len(hsn)==len(sac)==len(qty)==len(price)==len(tax)==len(discount)==len(total)==len(crdItem_ids) and crdItem_ids and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total,crdItem_ids)
+                mapped = list(mapped)
+                for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None'  :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
+                    if ele[9] == 0:
+                        itm = Fin_Items.objects.get(id = int(ele[0]))
+                        Fin_CreditNote_Items.objects.create(creditnote = crd, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                        itm.current_stock -= int(ele[4])
+                        itm.save()
+                    else:
+                        itm = Fin_Items.objects.get(id = int(ele[0]))
+                        inItm = Fin_CreditNote_Items.objects.get(id = int(ele[9]))
+                        crQty = int(inItm.quantity)
+                        
+                        Fin_CreditNote_Items.objects.filter( id = int(ele[9])).update(creditnote = crd, items = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax_rate = ele[6], discount = float(ele[7]), total = float(ele[8]))
+
+                        if crQty < int(ele[4]):
+                            itm.current_stock -=  abs(crQty - int(ele[4]))
+                        elif crQty > int(ele[4]):
+                            itm.current_stock += abs(crQty - int(ele[4]))
+                        itm.save()
+            
+            # Save transaction
+                    
+            Fin_CreditNote_History.objects.create(
+                Company = com,
+                LoginDetails = data,
+                creditnote = crd,
+                action = 'Edited'
+            )
+
+            return redirect(Fin_viewCreditNote, id)
+    else:
+        return redirect('/')
+
+def Fin_creditNotePdf(request,id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+        
+        crd = Fin_CreditNote.objects.get(id = id)
+        itms = Fin_CreditNote_Items.objects.filter(creditnote = crd)
+    
+        context = {'credit':crd, 'creditItems':itms,'cmp':com}
+        
+        template_path = 'company/Fin_Credit_NotePdf.html'
+        fname = 'Credit_Note_'+crd.creditnote_number
+        # Create a Django response object, and specify content_type as pdftemp_
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] =f'attachment; filename = {fname}.pdf'
+        # find the template and render it.
+        template = get_template(template_path)
+        html = template.render(context)
+
+        # create a pdf
+        pisa_status = pisa.CreatePDF(
+        html, dest=response)
+        # if error then show some funny view
+        if pisa_status.err:
+            return HttpResponse('We had some errors <pre>' + html + '</pre>')
+        return response
+    else:
+        return redirect('/')
+
+def Fin_shareCreditNoteToEmail(request,id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+        
+        try:
+            if request.method == 'POST':
+                emails_string = request.POST['email_ids']
+
+                # Split the string by commas and remove any leading or trailing whitespace
+                emails_list = [email.strip() for email in emails_string.split(',')]
+                email_message = request.POST['email_message']
+                # print(emails_list)
+            
+                crd = Fin_CreditNote.objects.get(id = id)
+                itms = Fin_CreditNote_Items.objects.filter(creditnote = crd)
+            
+                context = {'credit':crd, 'creditItems':itms,'cmp':com}
+                template_path = 'company/Fin_Credit_NotePdf.html'
+                template = get_template(template_path)
+
+                html  = template.render(context)
+                result = BytesIO()
+                pdf = pisa.pisaDocument(BytesIO(html.encode("ISO-8859-1")), result)
+                pdf = result.getvalue()
+                filename = f'Credit_Note_{crd.creditnote_number}'
+                subject = f"Credit_Note_{crd.creditnote_number}"
+                email = EmailMessage(subject, f"Hi,\nPlease find the attached Credit Note for - #-{crd.creditnote_number}. \n{email_message}\n\n--\nRegards,\n{com.Company_name}\n{com.Address}\n{com.State} - {com.Country}\n{com.Contact}", from_email=settings.EMAIL_HOST_USER, to=emails_list)
+                email.attach(filename, pdf, "application/pdf")
+                email.send(fail_silently=False)
+
+                messages.success(request, 'Credit Note details has been shared via email successfully..!')
+                return redirect(Fin_viewCreditNote,id)
+        except Exception as e:
+            print(e)
+            messages.error(request, f'{e}')
+            return redirect(Fin_viewCreditNote, id)
+
+def Fin_deleteCreditNote(request, id):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        crd = Fin_CreditNote.objects.get( id = id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        for i in Fin_CreditNote_Items.objects.filter(creditnote = crd):
+            item = Fin_Items.objects.get(id = i.items.id)
+            item.current_stock += i.quantity
+            item.save()
+        
+        Fin_CreditNote_Items.objects.filter(creditnote = crd).delete()
+
+        # Storing ref number to deleted table
+        # if entry exists and lesser than the current, update and save => Only one entry per company
+        if Fin_CreditNote_Reference.objects.filter(Company = com).exists():
+            deleted = Fin_CreditNote_Reference.objects.get(Company = com)
+            if int(crd.reference_number) > int(deleted.reference_number):
+                deleted.reference_number = crd.reference_number
+                deleted.save()
+        else:
+            Fin_CreditNote_Reference.objects.create(Company = com, LoginDetails = com.Login_Id, reference_number = crd.reference_number)
+        
+        crd.delete()
+        return redirect(Fin_creditNotes)
+
+def Fin_getInvoicePaidAmount(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            com = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+
+        invoiceId = request.GET['id']
+        invType = request.GET['invType']
+
+        paid = 0
+        if invType == 'Invoice':
+            inv = Fin_Invoice.objects.get(id = invoiceId)
+            paid = inv.paid_off
+
+        if invType == 'Recurring Invoice':
+            inv = Fin_Recurring_Invoice.objects.get(id = invoiceId)
+            paid = inv.paid_off
+
+        return JsonResponse({'status':True, 'paid':paid})
+    else:
+        return redirect('/')
+

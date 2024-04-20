@@ -162,7 +162,7 @@
                   <li><a href="{% url 'Fin_estimates' %}">Estimate</a></li>
                   <li><a href="{% url 'Fin_salesOrder' %}">Sales Order</a></li>
                   <li><a href="{% url 'Fin_invoice' %}">Invoices</a></li>
-                  <li><a href="">Credit Note</a></li>
+                  <li><a href="{% url 'Fin_creditNotes' %}">Credit Note</a></li>
                   <li><a href="{% url 'Fin_view_payment_received' %}">Payments Received</a></li>
                   <li><a href="{% url 'Fin_RET_INV_Listout' %}">Retainer Invoices</a></li>
                   <li><a href="{% url 'deliverylist' %}">Delivery Challan</a></li>
@@ -643,7 +643,7 @@
 
             {% if allmodules.Credit_Note == 1 %}
             <li id="creditnote">
-              <a href=""><i class="bx bx-right-arrow-alt"></i>Credit Note</a>
+              <a href="{% url 'Fin_creditNotes' %}"><i class="bx bx-right-arrow-alt"></i>Credit Note</a>
             </li>
             {% endif %}
 

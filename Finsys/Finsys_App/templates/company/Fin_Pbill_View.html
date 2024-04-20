@@ -905,10 +905,10 @@
                                 </div>
         
                                 <div class="col-md-3 mt-3 vl">
-                                    <h6 class="mb-0">HSN</h6>
+                                    <h6 class="mb-0">{% if i.item.item_type == 'Goods' %} HSN {% else %} SAC {% endif %}</h6>
                                 </div>
                                 <div class="col-md-3 mt-3">
-                                    <p class="mb-0 text-center">{{ i.item.hsn }}</p>
+                                    <p class="mb-0 text-center">{% if i.item.item_type == 'Goods' %} {{ i.item.hsn }} {% else %} {{ i.item.sac }} {% endif %}</p>
                                 </div>
                             </div>
                             <div class="row mb-4 d-flex justify-content-between align-items-center">
@@ -1833,5 +1833,6 @@
         });
     });
 </script>
+
 
 {% endblock %}
