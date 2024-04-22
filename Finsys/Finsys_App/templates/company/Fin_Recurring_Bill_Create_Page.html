@@ -111,7 +111,10 @@ function goBack() {
                 <tr class="item-row" >
                     <td></td>
                     <td class="border w-25" style="min-width: 150px;"><div style="display: flex;"><select style="text-transform: capitalize;" name="Item[]" id="selectItems" class="form-control item-select"><option value="">Select Item</option>{% for i in items %}<option value="{{i.id}}">{{i.name}}</option>{% endfor %}</select><button type="button" class="btn btn-outline-secondary text-grey ml-1" data-toggle="modal" data-target="#itemsModal">+</button></div></td>
-                    <td class="border" style="min-width: 150px;"><input name="hsn[]" type="text" class="form-control item-hsn" placeholder="Enter HSN" id="itemHSN"></td>
+                    <td class="border" style="min-width: 150px;">
+                        <input name="hsn[]" type="text" class="form-control item-hsn" placeholder="Enter HSN" id="itemHSN" readonly>
+                        <input name="sac[]" type="text" class="form-control item-sac" placeholder="Enter SAC" id="itemSAC" readonly style="display: none;">
+                    </td>
                     <td class="border" style="min-width: 150px;"><input name="qty[]" type="number" class="form-control item-qty mt-4" value="0"><small class="item-stockinlabel">Available Quantity : </small><small class="item-stockin">0</small></td>
                     <td class="border" style="min-width: 150px;"><input name="price[]" type="text" class="form-control item-price" placeholder="Enter price" id="itemPrice"></td>
                     <td class="border gst" style="min-width: 150px;display: none;" id="gst">
@@ -937,7 +940,7 @@ function goBack() {
                                                                 <tr class="border">
                                                                     <th class="border">#</th>
                                                                     <th class="border">ITEM</th>
-                                                                    <th class="border">HSN</th>
+                                                                    <th class="border">HSN / SAC</th>
                                                                     <th class="border">QTY</th>
                                                                     <th class="border">PRICE</th>
                                                                     <th class="border">TAX(%)</th>
@@ -950,9 +953,12 @@ function goBack() {
                                                                 <tr class="item-row">
                                                                     <td></td>
                                                                     <td class="border w-25" style="min-width: 150px;"><div style="display: flex;"><select style="text-transform: capitalize;" name="Item[]" id="selectItems" class="form-control item-select"><option value="">Select Item</option>{% for i in items %}<option value="{{i.id}}">{{i.name}}</option>{% endfor %}</select><button type="button" class="btn btn-outline-secondary text-grey ml-1" data-toggle="modal" data-target="#itemsModal">+</button></div></td>
-                                                                    <td class="border" style="min-width: 150px;"><input name="hsn[]" type="text" class="form-control item-hsn" placeholder="Enter HSN" id="itemHSN"></td>
+                                                                    <td class="border" style="min-width: 150px;">
+                                                                        <input name="hsn[]" type="text" class="form-control item-hsn" placeholder="Enter HSN" id="itemHSN" readonly>
+                                                                        <input name="sac[]" type="text" class="form-control item-sac" placeholder="Enter SAC" id="itemSAC" readonly style="display: none;">
+                                                                    </td>
                                                                     <td class="border" style="min-width: 150px;"><input name="qty[]" type="number" class="form-control item-qty mt-4" value="0"><small class="item-stockinlabel">Available Quantity : </small><small class="item-stockin">0</small></td>
-                                                                    <td class="border" style="min-width: 150px;"><input name="price[]" type="text" class="form-control item-price" placeholder="Enter price" id="itemPrice"></td>
+                                                                    <td class="border" style="min-width: 150px;"><input name="price[]" type="text" class="form-control item-price" placeholder="Enter price" id="itemPrice" readonly></td>
                                                                     <td class="border gst" style="min-width: 150px;display: none;" id="gst">
                                                                         <select name="gsttaxrate[]" id="GSTcolumn" onchange="initializeCalculations()" class="form-control item-gst_tax" placeholder="Tax Rate">
                                                                             <option value="0">GST 0 (0%)</option>
@@ -1207,7 +1213,18 @@ $("#itemTable").on("change", ".item-select", function () {
         type: 'GET',
         success: function (data) {
             // Update the placeholder elements with the fetched details
-            $row.find(".item-hsn").val(data.hsn);
+            if(data.item_type==='Goods')
+            {
+                $row.find(".item-hsn").val(data.hsn);
+                $row.find(".item-hsn").show();
+                $row.find(".item-sac").hide();
+            }
+            else
+            {
+                $row.find(".item-sac").val(data.sac);
+                $row.find(".item-sac").show();
+                $row.find(".item-hsn").hide();
+            }
             $row.find(".item-stockin").data("initial", data.current_stock); // Store the initial value
             $row.find(".item-stockin").html(data.current_stock);
             $row.find(".item-gst_tax").val(data.gst_tax).change();
@@ -1291,6 +1308,7 @@ $("#priceListRB").on("click", function() {
                                                                 var item = {
                                                                     'items': $(this).find('.item-select').val(),
                                                                     'hsn': $(this).find('.item-hsn').val(),
+                                                                    'sac': $(this).find('.item-sac').val(),
                                                                     'quantity': quantity,
                                                                     'price': $(this).find('.item-price').val(),
                                                                     'tax_rate': $(this).find('.item-tax').val(),
@@ -2335,7 +2353,7 @@ $("#priceListRB").on("click", function() {
                     <div class="modal-content" style="background-color: #213b52;">
                         <div class="modal-header">
                             <h5 class="m-3">New Payment Term</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <button type="button" class="close" onclick="$('#newPaymentTerm').modal('hide');$('#vendorModal').modal('show')" data-dismiss="modal aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
@@ -3224,7 +3242,7 @@ $("#priceListRB").on("click", function() {
                     <div class="modal-content" style="background-color: #213b52;">
                         <div class="modal-header">
                             <h5 class="m-3">New Payment Term</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <button type="button" onclick="$('#newPaymentTerm2').modal('hide');$('#customerModal').modal('show')" class="close" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
@@ -3713,10 +3731,15 @@ $("#priceListRB").on("click", function() {
                                     </a>
                                 </div>
                             </div>
-                            <div class="col-md-6 mt-3">
+                            <div class="col-md-6 mt-3" id="hsnDiv">
                                 <label for="hsnField" style="color: white;">HSN Code</label>
                                 <input type="number" name="hsn" class="form-control" style="background-color: #2a4964; color: white;" placeholder="Enter a valid HSN code" required id="hsnField" oninput="validateHSN()">
                                 <div id="hsnError" style="color: red;"></div>
+                            </div>
+                            <div class="col-md-6 mt-3" id="sacDiv" style="display: none;">
+                                <label for="sacField" style="color: white;">SAC Code</label>
+                                <input type="number" name="sac" class="form-control" style="background-color: #2a4964; color: white;" placeholder="Enter a valid SAC code" id="sacField" oninput="validateSAC()">
+                                <div id="sacError" style="color: red;"></div>
                             </div>
                         </div>
                         <div class="row mt-3">
@@ -3913,7 +3936,7 @@ $("#priceListRB").on("click", function() {
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
                 <h5 class="m-3">New Item Unit</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close" onclick="$('#createNewUnit').modal('hide')" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -3947,7 +3970,7 @@ $("#priceListRB").on("click", function() {
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
                 <h5 class="m-3">New Account</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close" onclick="$('#createNewAccount').modal('hide')" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -4455,6 +4478,50 @@ $(document).on("click","#saveNewAccount",function(){
                         
     
 
+
+<script>
+    function validateSAC() {
+        var sacField = document.getElementById("sacField");
+        var errorText = document.getElementById("sacError");
+        var sacValue = sacField.value;
+
+        if (sacValue.length < 6) {
+            errorText.innerText = "SAC must contain at least 6 digits";
+            sacField.setCustomValidity("SAC must contain at least 6 digits");
+            sacField.style.borderColor = "red";
+            return false;
+        } else {
+            errorText.innerText = "";
+            sacField.setCustomValidity(""); 
+            sacField.style.borderColor = ""; 
+            return true;
+        }
+    }
+    $(document).ready(function(){
+        $('#itemType').on('input',function(){
+            if($(this).val()=== 'Goods' )
+            {
+                $('#sacField').val('');
+                $('#hsnField').prop('required',true);
+                $('#sacField').prop('required',false);
+                $('#hsnDiv').show();
+                $('#sacDiv').hide();
+                $('#sacError').text('');
+                $('#sacField').css({'border-color':'white'});
+            }
+            else
+            {
+                $('#hsnField').val('')
+                $('#hsnField').prop('required',false);
+                $('#sacField').prop('required',true);
+                $('#sacDiv').show();
+                $('#hsnDiv').hide();
+                $('#hsnError').text('');
+                $('#hsnField').css({'border-color':'white'});
+            }
+        })
+    })
+</script>
 
 
 {% endblock %}

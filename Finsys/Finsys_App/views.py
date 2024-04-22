@@ -11622,6 +11622,8 @@ def Fin_getEwayItemDetails(request):
                 'status': True,
                 'id': item.id,
                 'hsn': item.hsn,
+                'sac': item.sac,
+                'item_type':item.item_type,
                 'sales_rate': item.selling_price,
                 'avl': item.current_stock,
                 'tax': True if item.tax_reference == 'taxable' else False,
@@ -11786,7 +11788,12 @@ def Fin_createEwayItem(request):
         name = request.POST['name']
         type = request.POST['type']
         unit = request.POST.get('unit')
-        hsn = request.POST['hsn']
+        if request.POST['hsn']:
+            hsn = request.POST['hsn']
+            sac = None
+        elif request.POST['sac']:
+            sac = request.POST['sac']
+            hsn = None
         tax = request.POST['taxref']
         gstTax = 0 if tax == 'non taxable' else request.POST['intra_st']
         igstTax = 0 if tax == 'non taxable' else request.POST['inter_st']
@@ -11798,8 +11805,11 @@ def Fin_createEwayItem(request):
         if Fin_Items.objects.filter(Company=com, name__iexact=name).exists():
             res = f"{name} already exists, try another!"
             return JsonResponse({'status': False, 'message':res})
-        elif Fin_Items.objects.filter(Company = com, hsn__iexact = hsn).exists():
+        elif Fin_Items.objects.filter(Q(Company=com) & (Q(hsn__iexact=hsn) & Q(hsn__isnull=False))).exists():
             res = f"HSN - {hsn} already exists, try another.!"
+            return JsonResponse({'status': False, 'message':res})
+        elif Fin_Items.objects.filter(Q(Company=com) & (Q(sac__iexact=sac) & Q(sac__isnull=False))).exists():
+            res = f"SAC - {sac} already exists, try another.!"
             return JsonResponse({'status': False, 'message':res})
         else:
             item = Fin_Items(
@@ -11809,6 +11819,7 @@ def Fin_createEwayItem(request):
                 item_type = type,
                 unit = unit,
                 hsn = hsn,
+                sac=sac,
                 tax_reference = tax,
                 intra_state_tax = gstTax,
                 inter_state_tax = igstTax,
@@ -12008,19 +12019,30 @@ def Fin_CreateEwaybill(request):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn = request.POST.getlist("hsn[]")
+            sac = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("priceListPrice[]") if 'priceList' in request.POST else request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
             discount = request.POST.getlist("discount[]")
             total = request.POST.getlist("total[]")
 
-            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId,itemName,hsn,qty,price,tax,discount,total)
+            if len(itemId)==len(itemName)==len(hsn)==len(qty)==len(price)==len(tax)==len(discount)==len(total) and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId,itemName,hsn,sac,qty,price,tax,discount,total)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None' :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     itm = Fin_Items.objects.get(id = int(ele[0]))
-                    Fin_Eway_Items.objects.create(Ewaybills = ewaybill, Item = itm, hsn = ele[2], quantity = int(ele[3]), price = float(ele[4]), tax = ele[5], discount = float(ele[6]), total = float(ele[7]))
-                    itm.current_stock -= int(ele[3])
+                    Fin_Eway_Items.objects.create(Ewaybills = ewaybill, Item = itm, hsn = hsn,sac=sac, quantity = int(ele[4]), price = float(ele[5]), tax = ele[6], discount = float(ele[7]), total = float(ele[8]))
+                    itm.current_stock -= int(ele[4])
                     itm.save()
 
 
@@ -12336,6 +12358,7 @@ def Fin_EditEwaybills(request, id):
             itemId = request.POST.getlist("item_id[]")
             itemName = request.POST.getlist("item_name[]")
             hsn = request.POST.getlist("hsn[]")
+            sac = request.POST.getlist("sac[]")
             qty = request.POST.getlist("qty[]")
             price = request.POST.getlist("priceListPrice[]") if 'priceList' in request.POST else request.POST.getlist("price[]")
             tax = request.POST.getlist("taxGST[]") if request.POST['place_of_supply'] == com.State else request.POST.getlist("taxIGST[]")
@@ -12358,48 +12381,58 @@ def Fin_EditEwaybills(request, id):
 
             count = Fin_Eway_Items.objects.filter(Ewaybills=ewaybill).count()
 
-            if len(itemId) == len(itemName) == len(hsn) == len(qty) == len(price) == len(tax) == len(discount) == len(total) == len(
-                    ewayItem_ids) and ewayItem_ids and itemId and itemName and hsn and qty and price and tax and discount and total:
-                mapped = zip(itemId, itemName, hsn, qty, price, tax, discount, total, ewayItem_ids)
+            if len(itemId) == len(itemName) == len(hsn)== len(sac) == len(qty) == len(price) == len(tax) == len(discount) == len(total) == len(
+                    ewayItem_ids) and ewayItem_ids and itemId and itemName and qty and price and tax and discount and total:
+                mapped = zip(itemId, itemName, hsn,sac, qty, price, tax, discount, total, ewayItem_ids)
                 mapped = list(mapped)
                 for ele in mapped:
+
+                    if ele[2] == '' or ele[2] == 'None'  :
+                        hsn = None
+                    else:
+                        hsn = ele[2]
+                    if ele[3] == '' or ele[3] == 'None':
+                        sac = None
+                    else:
+                        sac = ele[3]
+
                     if int(len(itemId)) > int(count):
-                        if ele[8] == 0:
+                        if ele[9] == 0:
                             itm = Fin_Items.objects.get(id=int(ele[0]))
-                            Fin_Eway_Items.objects.create(Ewaybills=ewaybill, Item=itm, hsn=ele[2],
-                                                        quantity=int(ele[3]), price=float(ele[4]), tax=ele[5],
-                                                        discount=float(ele[6]), total=float(ele[7]))
-                            itm.current_stock -= int(ele[3])
+                            Fin_Eway_Items.objects.create(Ewaybills=ewaybill, Item=itm, hsn=hsn,sac=sac,
+                                                        quantity=int(ele[4]), price=float(ele[5]), tax=ele[6],
+                                                        discount=float(ele[7]), total=float(ele[8]))
+                            itm.current_stock -= int(ele[4])
                             itm.save()
                         else:
                             itm = Fin_Items.objects.get(id=int(ele[0]))
-                            inItm = Fin_Eway_Items.objects.get(id=int(ele[8]))
+                            inItm = Fin_Eway_Items.objects.get(id=int(ele[9]))
                             crQty = int(inItm.quantity)
 
-                            Fin_Eway_Items.objects.filter(id=int(ele[8])).update(Ewaybills=ewaybill, Item=itm,
-                                                                                hsn=ele[2], quantity=int(ele[3]),
-                                                                                price=float(ele[4]), tax=ele[5],
-                                                                                discount=float(ele[6]), total=float(ele[7]))
+                            Fin_Eway_Items.objects.filter(id=int(ele[9])).update(Ewaybills=ewaybill, Item=itm,
+                                                                                hsn=hsn,sac=sac, quantity=int(ele[4]),
+                                                                                price=float(ele[5]), tax=ele[6],
+                                                                                discount=float(ele[7]), total=float(ele[8]))
 
-                            if crQty < int(ele[3]):
-                                itm.current_stock -= abs(crQty - int(ele[3]))
-                            elif crQty > int(ele[3]):
-                                itm.current_stock += abs(crQty - int(ele[3]))
+                            if crQty < int(ele[4]):
+                                itm.current_stock -= abs(crQty - int(ele[4]))
+                            elif crQty > int(ele[4]):
+                                itm.current_stock += abs(crQty - int(ele[4]))
                             itm.save()
                     else:
                         itm = Fin_Items.objects.get(id=int(ele[0]))
-                        inItm = Fin_Eway_Items.objects.get(id=int(ele[8]))
+                        inItm = Fin_Eway_Items.objects.get(id=int(ele[9]))
                         crQty = int(inItm.quantity)
 
-                        Fin_Eway_Items.objects.filter(id=int(ele[8])).update(Ewaybills=ewaybill, Item=itm,
-                                                                            hsn=ele[2], quantity=int(ele[3]),
-                                                                            price=float(ele[4]), tax=ele[5],
-                                                                            discount=float(ele[6]), total=float(ele[7]))
+                        Fin_Eway_Items.objects.filter(id=int(ele[9])).update(Ewaybills=ewaybill, Item=itm,
+                                                                            hsn=hsn,sac=sac, quantity=int(ele[4]),
+                                                                            price=float(ele[5]), tax=ele[6],
+                                                                            discount=float(ele[7]), total=float(ele[8]))
 
-                        if crQty < int(ele[3]):
-                            itm.current_stock -= abs(crQty - int(ele[3]))
-                        elif crQty > int(ele[3]):
-                            itm.current_stock += abs(crQty - int(ele[3]))
+                        if crQty < int(ele[4]):
+                            itm.current_stock -= abs(crQty - int(ele[4]))
+                        elif crQty > int(ele[4]):
+                            itm.current_stock += abs(crQty - int(ele[4]))
                         itm.save()
 
             logger.debug(f'eway_items: {eway_items}')
@@ -15979,6 +16012,9 @@ def Fin_Attendance(request):
         log = Fin_Login_Details.objects.get(id = s_id)
         
         if log.User_Type == 'Staff':
+            s_id = request.session['s_id']
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            allmodules = Fin_Modules_List.objects.get(company_id = com.company_id,status = 'New')
             event_counts = {}
             formatted_event_counts = {}
             staff =Fin_Staff_Details.objects.get(Login_Id =log)
@@ -16042,7 +16078,11 @@ def Fin_Attendance(request):
                 employee_attendance[key]['working_days'] = last_day - total_holidays - employee_attendance[key]['absent_days']
             
 
-        if log.User_Type == 'Company':
+        # if log.User_Type == 'Company':
+        else:
+            s_id = request.session['s_id']
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            allmodules = Fin_Modules_List.objects.get(Login_Id = s_id,status = 'New')
             event_counts = {}
             formatted_event_counts = {}
             com = Fin_Company_Details.objects.get(Login_Id = log)
@@ -16111,28 +16151,32 @@ def Fin_Attendance(request):
             "events": all_events,
             "event_counts_json": formatted_event_counts,
             'employee_attendance': list(employee_attendance.values()),
+            'allmodules':allmodules,
+            'com':com,
+            'data':log,
         }   
         return render(request,'company/Fin_Attendance.html',context)
-
-
-
 
 
 def Fin_Add_Attendance(request):
     if 's_id' in request.session:
         s_id = request.session['s_id']
         log = Fin_Login_Details.objects.get(id = s_id)
+        data = log
         if log.User_Type == 'Staff':
             staff =Fin_Staff_Details.objects.get(Login_Id =log)
+            com = staff
+            allmodules = Fin_Modules_List.objects.get(company_id = com.company_id,status = 'New')
             emp = Employee.objects.filter(company = staff.company_id,employee_status = 'active')
             bgroup = Employee_Blood_Group.objects.filter(company = staff.company_id)
         if log.User_Type == 'Company':
             com = Fin_Company_Details.objects.get(Login_Id = log)
+            allmodules = Fin_Modules_List.objects.get(Login_Id = s_id,status = 'New')
             emp = Employee.objects.filter(company = com.id,employee_status = 'active')
             bgroup = Employee_Blood_Group.objects.filter(company = com.id)
 
         context ={
-            'emp':emp,'bloodgroup':bgroup
+            'emp':emp,'bloodgroup':bgroup,'allmodules':allmodules,'com':com,'data':data
         }
         return render(request,'company/Fin_add_attendance.html',context)
     return redirect('Fin_Attendance')
@@ -23858,6 +23902,7 @@ def Fin_recurring_bill_save(request):
             total = [float(value) for value in total_texts]
             discount = tuple(request.POST.getlist("discount[]"))
             hsn = request.POST.getlist("hsn[]")
+            sac = request.POST.getlist("sac[]")
             price = request.POST.getlist("price[]")
             
             if source == 'Kerala' and place == 'Kerala':
@@ -23867,21 +23912,41 @@ def Fin_recurring_bill_save(request):
                     
             if loginn.User_Type == 'Company':
                 com2 = Fin_Company_Details.objects.get(Login_Id = sid)
-                if len(product) == len(qty) == len(discount) == len(total) == len(hsn) == len(tax) == len(price):
-                    group = zip(product, qty, discount, total, hsn, tax, price)
+                if len(product) == len(qty) == len(discount) == len(total) == len(hsn)== len(sac) == len(tax) == len(price):
+                    group = zip(product, qty, discount, total, hsn, tax, price,sac)
                     mapped=list(group)
                     for itemsNew in mapped:
-                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=int(itemsNew[4]),tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=newBill.id,company_id=com2.id)
+
+                        if itemsNew[4] == '' or itemsNew[4] == 'None' :
+                            hsn = None
+                        else:
+                            hsn = int(itemsNew[4])
+                        if itemsNew[7] == '' or itemsNew[7] == 'None':
+                            sac = None
+                        else:
+                            sac = int(itemsNew[7])
+
+                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=hsn,sac=sac,tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=newBill.id,company_id=com2.id)
                         itemsTable.save()
                         
                 
             elif loginn.User_Type == 'Staff' :
                 com2 = Fin_Staff_Details.objects.get(Login_Id = sid)
-                if len(product) == len(qty) == len(discount) == len(total) == len(hsn) == len(tax) == len(price):
-                    group = zip(product, qty, discount, total, hsn, tax, price)
+                if len(product) == len(qty) == len(discount) == len(total) == len(hsn)== len(sac) == len(tax) == len(price):
+                    group = zip(product, qty, discount, total, hsn, tax, price,sac)
                     mapped=list(group)
                     for itemsNew in mapped:
-                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=int(itemsNew[4]),tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=newBill.id,company_id=com2.company_id_id)
+
+                        if itemsNew[4] == '' or itemsNew[4] == 'None' :
+                            hsn = None
+                        else:
+                            hsn = int(itemsNew[4])
+                        if itemsNew[7] == '' or itemsNew[7] == 'None':
+                            sac = None
+                        else:
+                            sac = int(itemsNew[7])
+
+                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=hsn,sac=sac,tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=newBill.id,company_id=com2.company_id_id)
                         itemsTable.save()
                         
             return JsonResponse({'messages': 'Bill created successfully','success':True})
@@ -24093,6 +24158,8 @@ def Fin_get_item_details(request, item_id):
             data = {
                 'id' : int(items.id),
                 'hsn': items.hsn,
+                'sac':items.sac,
+                'item_type':items.item_type,
                 'price': items.purchase_price,
                 'gst_tax': items.intra_state_tax,
                 'igst_tax': items.inter_state_tax,
@@ -24310,7 +24377,7 @@ def Fin_recurring_bill_edit_page(request,pk):
                     }
 
     return render(request,'company/Fin_Recurring_Bill_Edit_Page.html',{'companyDetails':companyDetails,'allmodules':allmodules,'vendors':vendors,'pTerms':payment_terms,'items':items,'customers':customers,'refData':data,'accounts':acc,'units':units,'RepeatEvery':repeat,'recur':recur,'itemTable':itemTable,'list':pricelist_p,'list_s':pricelist_s,'bank':bank,'nxtRB':nxtRb,'com':com,'data':loginn})
-
+ 
 def Fin_recurring_bill_edit_save(request,pk):
     recur = Fin_Recurring_Bills.objects.get(id=pk)
     sid = request.session['s_id']
@@ -24434,6 +24501,7 @@ def Fin_recurring_bill_edit_save(request,pk):
             total = [float(value) for value in total_texts]
             discount = tuple(request.POST.getlist("discount[]"))
             hsn = request.POST.getlist("hsn[]")
+            sac = request.POST.getlist("sac[]")
             price = request.POST.getlist("price[]")
             
             if source == 'Kerala' and place == 'Kerala':
@@ -24448,11 +24516,21 @@ def Fin_recurring_bill_edit_save(request,pk):
                 recurItems = Fin_Recurring_Bill_Items.objects.filter(recurring_bill_id=pk,company_id=com.id)
                 for i in recurItems:
                     i.delete()
-                if len(product) == len(qty) == len(discount) == len(total) == len(hsn) == len(tax) == len(price):
-                    group = zip(product, qty, discount, total, hsn, tax, price)
+                if len(product) == len(qty) == len(discount) == len(total) == len(hsn) == len(sac) == len(tax) == len(price):
+                    group = zip(product, qty, discount, total, hsn, tax, price,sac)
                     mapped=list(group)
                     for itemsNew in mapped:
-                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=int(itemsNew[4]),tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=pk,company_id=com.id)
+
+                        if itemsNew[4] == '' or itemsNew[4] == 'None' :
+                            hsn = None
+                        else:
+                            hsn = int(itemsNew[4])
+                        if itemsNew[7] == '' or itemsNew[7] == 'None':
+                            sac = None
+                        else:
+                            sac = int(itemsNew[7])
+
+                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=hsn,sac=sac,tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=pk,company_id=com.id)
                         itemsTable.save()
                 
             elif loginn.User_Type == 'Staff' :
@@ -24460,11 +24538,21 @@ def Fin_recurring_bill_edit_save(request,pk):
                 recurItems = Fin_Recurring_Bill_Items.objects.filter(recurring_bill_id=pk,company_id=com.company_id_id)
                 for i in recurItems:
                     i.delete()
-                if len(product) == len(qty) == len(discount) == len(total) == len(hsn) == len(tax) == len(price):
-                    group = zip(product, qty, discount, total, hsn, tax, price)
+                if len(product) == len(qty) == len(discount) == len(total) == len(hsn) == len(sac) == len(tax) == len(price):
+                    group = zip(product, qty, discount, total, hsn, tax, price,sac)
                     mapped=list(group)
                     for itemsNew in mapped:
-                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=int(itemsNew[4]),tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=pk,company_id=com.company_id_id)
+
+                        if itemsNew[4] == '' or itemsNew[4] == 'None' :
+                            hsn = None
+                        else:
+                            hsn = int(itemsNew[4])
+                        if itemsNew[7] == '' or itemsNew[7] == 'None':
+                            sac = None
+                        else:
+                            sac = int(itemsNew[7])
+
+                        itemsTable = Fin_Recurring_Bill_Items(items_id = int(itemsNew[0]),quantity=int(itemsNew[1]),discount=float(itemsNew[2]),total=float(itemsNew[3]),hsn=hsn,sac=sac,tax_rate=int(itemsNew[5]),price=float(itemsNew[6]),recurring_bill_id=pk,company_id=com.company_id_id)
                         itemsTable.save()
                     
             return JsonResponse({'messages':'successfully edited','relo':True})
@@ -24637,7 +24725,12 @@ def Fin_createNewItem_modal(request):
             name = request.POST['name']
             type = request.POST['type']
             unit = request.POST.get('unit')
-            hsn = request.POST['hsn']
+            if request.POST['hsn']:
+                hsn = request.POST['hsn']
+                sac = None
+            elif request.POST['sac']:
+                sac = request.POST['sac']
+                hsn = None
             tax = request.POST['taxref']
             gstTax = 0 if tax == 'non taxable' else request.POST['intra_st']
             igstTax = 0 if tax == 'non taxable' else request.POST['inter_st']
@@ -24655,9 +24748,14 @@ def Fin_createNewItem_modal(request):
             
             #save item and transaction if item or hsn doesn't exists already
             if Fin_Items.objects.filter(Company=com, name__iexact=name).exists():
-                return JsonResponse({'msg':"Name already exists, try another!",'success':False})
-            elif Fin_Items.objects.filter(Company = com, hsn__iexact = hsn).exists():
-                return JsonResponse({'msg':"HSN already exists, try another!",'success':False})
+                res = f"{name} already exists, try another!"
+                return JsonResponse({'status': False, 'msg':res})
+            elif Fin_Items.objects.filter(Q(Company=com) & (Q(hsn__iexact=hsn) & Q(hsn__isnull=False))).exists():
+                res = f"HSN - {hsn} already exists, try another.!"
+                return JsonResponse({'status': False, 'msg':res})
+            elif Fin_Items.objects.filter(Q(Company=com) & (Q(sac__iexact=sac) & Q(sac__isnull=False))).exists():
+                res = f"SAC - {sac} already exists, try another.!"
+                return JsonResponse({'status': False, 'msg':res})
             else:
                 item = Fin_Items(
                     Company = com,
@@ -24666,6 +24764,7 @@ def Fin_createNewItem_modal(request):
                     item_type = type,
                     unit = unit,
                     hsn = hsn,
+                    sac=sac,
                     tax_reference = tax,
                     intra_state_tax = gstTax,
                     inter_state_tax = igstTax,

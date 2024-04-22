@@ -427,7 +427,7 @@
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
                 <h5 class="m-3">New Customer Payment Term</h5>
-                <button type="button" class="close" data-toggle="modal" data-target="#newCustomer" aria-label="Close">
+                <button type="button" class="close" onclick="$('#newCustomerPaymentTerm').modal('hode');$('#newCustomer').modal('show');" data-dismiss="modal" data-toggle="modal" data-target="#newCustomer" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -854,7 +854,7 @@
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
                 <h5 class="m-3">New Item Unit</h5>
-                <button type="button" class="close" data-toggle="modal" data-target="#newItem" aria-label="Close">
+                <button type="button" class="close" onclick="$('#createNewUnit').modal('hide')" data-toggle="modal" data-target="#newItem" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -888,7 +888,7 @@
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
                 <h5 class="m-3">New Account</h5>
-                <button type="button" class="close" data-toggle="modal" data-target="#newItem" aria-label="Close">
+                <button type="button" class="close" data-dismiss="modal" data-toggle="modal" data-target="#newItem" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -977,7 +977,7 @@
         <div class="modal-content" style="background-color: #213b52;">
             <div class="modal-header">
                 <h5 class="m-3">New Item</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close" onclick="$('#newItem').modal('hide');$('#createNewUnit').modal('hide');$('#createNewAccount').modal('hide')" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>

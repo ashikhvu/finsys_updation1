@@ -1025,6 +1025,7 @@ class Fin_Eway_Items(models.Model):
     
     Item = models.ForeignKey(Fin_Items,on_delete=models.SET_NULL, null=True)
     hsn = models.BigIntegerField(null=True, blank=True)
+    sac = models.BigIntegerField(null=True, blank=True)
     quantity = models.IntegerField(default=0, null=True)
     price = models.FloatField(default=0.0, null=True, blank=True)
     total = models.FloatField(default=0.0, null=True, blank=True)
@@ -1864,6 +1865,7 @@ class Fin_Recurring_Bills(models.Model):
 class Fin_Recurring_Bill_Items(models.Model):
     items = models.ForeignKey(Fin_Items,on_delete=models.CASCADE,null=True,blank=True)
     hsn = models.CharField(max_length=255,null=True,blank=True)
+    sac = models.CharField(max_length=255,null=True,blank=True)
     quantity = models.IntegerField(null=True,blank=True)
     price = models.IntegerField(null=True,blank=True)
     tax_rate = models.IntegerField(null=True,blank=True)

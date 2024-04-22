@@ -13,8 +13,17 @@
 <!-- <script src="{% static 'assets/js/Employee_Create_Page.js' %}"></script> -->
 
     <div class="page-content ">
+        <div class="ml-auto"><a style="cursor: pointer;" title="Close" onclick="goBack()" ><i class="fa-solid fa-circle-xmark fa-2xl"></i></a></div>
         <div class="card radius-15">
-            <div class="ml-auto"><a style="cursor: pointer;" title="Close" onclick="goBack()" ><i class="fa-solid fa-circle-xmark fa-2xl"></i></a></div>
+            <div class="card-body">
+                <div class="card-title">
+                    <center><h3 class="mb-0">CREATE EMPLOYEE</h3></center>
+                </div>
+                <hr/>
+            </div>
+        </div>
+        
+        <div class="card radius-15">
             <script>
                 function goBack() {
                 window.history.back();
@@ -23,7 +32,6 @@
             <div class=" card-body">
                 <form action="{% url 'employee_save' %}" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-               <center> <h2>CREATE EMPLOYEE </h2></center><br>
 
                 
                 <br>
